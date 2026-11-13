@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>قارئ الشموع — توقع بعد 15 دقيقة</title>
+<title>قارئ الشموع — 31 مؤشرًا + استمرار الاتجاه — OTC</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@600;700&display=swap" rel="stylesheet">
@@ -130,8 +130,29 @@ h3{font-size:14px;font-weight:600;margin:22px 0 10px;color:var(--mute)}
 .cc b{display:block;font-size:14px;font-weight:600}
 .cc.lo{opacity:.5}
 .cclab{display:flex;justify-content:space-between;color:var(--mute);font-size:12px;direction:ltr;margin-top:6px}
+details.cat{border-bottom:1px solid #1f3b49}
+details.cat summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:128px 1fr 44px 14px;gap:10px;align-items:center;font-size:13.5px;padding:8px 0}
+details.cat summary::-webkit-details-marker{display:none}
+details.cat summary::after{content:"▾";color:var(--mute);font-size:12px;transition:transform .15s}
+details.cat[open] summary::after{transform:rotate(180deg)}
+details.cat .votes{padding:2px 0 12px}
+details.cat .vote{font-size:12.5px;color:#c9d9de}
+.catbar{font-weight:600}
+.toggle select{background:var(--ink);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:13.5px}
+.pers{background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:14px}
+.pers .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pers .pc{text-align:center;border:1px solid var(--line);border-radius:8px;padding:10px 6px;background:var(--panel)}
+.pers .pc small{display:block;color:var(--mute);font-size:12.5px}
+.pers .pc b{font-family:var(--display);font-size:34px;line-height:1.15}
+.pers .good{color:var(--up)}.pers .mid{color:var(--amber)}.pers .bad{color:var(--down)}
+.pers .verdict2{margin:10px 0 0;font-weight:600;font-size:14px}
+.pers ul{margin:8px 0 0;padding-inline-start:18px;color:#c9d9de;font-size:12.5px}
+.pers .mini{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px;font-size:12.5px}
+.pers .mini div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #1f3b49;padding:4px 0}
+.pers .mini span{color:var(--mute)}
+.pers .why{margin:10px 0 0;font-size:12px;color:var(--mute)}
 @media(prefers-reduced-motion:reduce){.gauge .val{transition:none}}
-@media(max-width:520px){.verdict{font-size:44px}.vote{grid-template-columns:104px 1fr 40px}.spec{margin-inline-start:0}}
+@media(max-width:520px){.verdict{font-size:44px}.vote{grid-template-columns:104px 1fr 40px}details.cat summary{grid-template-columns:104px 1fr 40px 12px}.spec{margin-inline-start:0}}
 </style>
 </head>
 <body>
@@ -150,7 +171,7 @@ h3{font-size:14px;font-weight:600;margin:22px 0 10px;color:var(--mute)}
   </div>
   <div class="spec">
     <span class="chip">الإطار <b class="num">M3</b></span>
-    <span class="chip">يقرأ <b class="num">30</b> شمعة</span>
+    <span class="chip"><b class="num">30</b> شمعة · <b class="num">31</b> مؤشرًا</span>
     <span class="chip">يتوقع بعد <b class="num">6</b> شموع (<b class="num">15</b> د)</span>
   </div>
 </header>
@@ -168,8 +189,18 @@ h3{font-size:14px;font-weight:600;margin:22px 0 10px;color:var(--mute)}
       <div class="toolbar">
         <button class="btn" id="btnNew" type="button">صورة جديدة</button>
         <button class="btn" id="btnRegion" type="button">تحديد منطقة الشارت يدويًا</button>
+        <button class="btn" id="btnVol" type="button">تحديد لوحة الحجم</button>
+        <button class="btn" id="btnVolClear" type="button" hidden>إزالة الحجم</button>
         <label class="toggle"><input type="checkbox" id="optBoxes" checked> إظهار قراءة الشموع</label>
         <label class="toggle"><input type="checkbox" id="optLive" checked> تجاهل الشمعة الحالية غير المكتملة</label>
+        <label class="toggle"><input type="checkbox" id="optOtc" checked> سوق OTC</label>
+        <label class="toggle">حد الخوف
+          <select id="fear" aria-label="حد الخوف">
+            <option value="0.4">صارم (0.4 ATR)</option>
+            <option value="0.6" selected>عادي (0.6 ATR)</option>
+            <option value="0.9">متساهل (0.9 ATR)</option>
+          </select>
+        </label>
       </div>
       <div class="canvas-wrap"><canvas id="cv"></canvas></div>
       <div class="hint" id="hint" role="status"></div>
@@ -204,9 +235,13 @@ const GREEN = [70, 183, 52], RED = [255, 62, 31];   // ألوان شموع ال�
 const S = {
   base: null, W: 0, H: 0, data: null, masks: {},
   region: null, candles: [], bw: 12, step: 17.6,
+  volRegion: null, volMode: 'proxy', dragKey: null,
   mode: null, drag: null, calib: [{y:null,p:null},{y:null,p:null}],
   result: null, boxes: true, skipLive: true
 };
+
+S.fear = .6; S.otc = true;
+const PH = 4;   // أفق الاستمرارية: 3 و4 شموع
 
 /* ---------- تحميل الصورة ---------- */
 function loadFile(file){
@@ -225,7 +260,7 @@ function loadFile(file){
     S.calib = [{y:null,p:null},{y:null,p:null}]; $('#y0').textContent = $('#y1').textContent = 'لم تُحدد';
     $('#drop').hidden = true; $('#stage').hidden = false;
     URL.revokeObjectURL(url);
-    S.region = autoRegion();
+    S.region = autoRegion(); S.volRegion = null; $('#btnVolClear').hidden = true;
     run();
   };
   img.onerror = () => hint('تعذّر فتح الصورة، جرّب صورة بصيغة PNG أو JPG.', true);
@@ -326,37 +361,215 @@ function linreg(y){
   return {slope, r2: sst ? 1-sse/sst : 0};
 }
 
-const WEIGHTS = {trend:.20, ema:.18, mom:.14, struct:.14, rsi:.12, boll:.10, candle:.12};
-const NAMES = {trend:'انحدار الاتجاه', ema:'تقاطع EMA 8/21', mom:'زخم آخر 6 شموع', struct:'هيكل القمم والقيعان', rsi:'RSI (14)', boll:'بولينجر (20)', candle:'الشموع الأخيرة'};
+/* ====== المؤشرات (31) مقسمة على 5 مجموعات ====== */
+const NAMES = {
+  reg:'انحدار خطي', struct:'هيكل القمم والقيعان', ema:'EMA 8/21', ma:'Moving Average (WMA 10)', sma:'SMA 10/30',
+  sar:'Parabolic SAR', ichi:'Ichimoku Cloud', gator:'Alligator', st:'SuperTrend', adx:'ADX (+DI/−DI)', aroon:'Aroon', vortex:'Vortex',
+  mom:'زخم 6 شموع', rsi:'RSI', stoch:'Stochastic', macd:'MACD', cci:'CCI', mom10:'Momentum 10', ao:'Awesome Oscillator',
+  roc:'Rate of Change', wr:'Williams %R', dem:'DeMarker',
+  boll:'Bollinger Bands', atr:'ATR (توسع التذبذب)', kelt:'Keltner Channel', donch:'Donchian Channel', env:'Envelopes',
+  fractal:'Fractal', candle:'الشموع الأخيرة', vol:'Volume (ضغط الحجم)', obv:'OBV'
+};
+const CATS = [
+  {key:'trend', name:'الاتجاه', keys:['reg','struct','ema','ma','sma','sar','ichi','gator','st','adx','aroon','vortex']},
+  {key:'mom', name:'الزخم والمذبذبات', keys:['mom','rsi','stoch','macd','cci','mom10','ao','roc','wr','dem']},
+  {key:'volat', name:'التذبذب والقنوات', keys:['boll','atr','kelt','donch','env']},
+  {key:'price', name:'حركة السعر', keys:['fractal','candle']},
+  {key:'volume', name:'الحجم', keys:['vol','obv']}
+];
+// أوزان تقديرية من عندي (غير مُدرَّبة)؛ الحجم الحقيقي 20% والبديل 6% والباقي يُعاد توزيعه
+const W0 = {reg:.06,struct:.03,ema:.04,ma:.03,sma:.03,sar:.04,ichi:.04,gator:.03,st:.04,adx:.04,aroon:.03,vortex:.03,
+  mom:.03,rsi:.04,stoch:.03,macd:.04,cci:.03,mom10:.02,ao:.03,roc:.02,wr:.03,dem:.03,
+  boll:.03,atr:.02,kelt:.03,donch:.03,env:.02, fractal:.03,candle:.09};
+function weightsFor(mode){
+  const volW = mode==='real' ? .20 : .06;
+  const tot = Object.values(W0).reduce((a,b)=>a+b,0), k = (1-volW)/tot, w = {};
+  for(const key in W0) w[key] = W0[key]*k;
+  w.vol = volW*.6; w.obv = volW*.4;
+  return w;
+}
+
+const trOf = (c,pc) => Math.max(c.h-c.l, Math.abs(c.h-pc), Math.abs(c.l-pc));
+function wmaLast(a,p){ const x=a.slice(-p); let nu=0,de=0; x.forEach((v,i)=>{ nu+=v*(i+1); de+=i+1; }); return nu/de; }
+function smmaSeries(a,p){
+  const out=[]; let prev=null;
+  for(let i=0;i<a.length;i++){
+    if(i<p-1){ out.push(null); continue; }
+    prev = i===p-1 ? mean(a.slice(0,p)) : (prev*(p-1)+a[i])/p;
+    out.push(prev);
+  }
+  return out;
+}
+function seriesAt(ser, idx){ const first = ser.findIndex(v=>v!=null); return first<0 ? 0 : ser[Math.max(idx, first)]; }
+
+function psar(w){
+  let up = w[1].c>=w[0].c, af=.02, ep = up ? w[0].h : w[0].l, sar = up ? w[0].l : w[0].h, bars=0;
+  for(let i=1;i<w.length;i++){
+    sar = sar + af*(ep-sar);
+    if(up){
+      sar = Math.min(sar, w[i-1].l, i>1 ? w[i-2].l : w[i-1].l);
+      if(w[i].l < sar){ up=false; sar=ep; ep=w[i].l; af=.02; bars=0; }
+      else { if(w[i].h>ep){ ep=w[i].h; af=Math.min(af+.02,.2); } bars++; }
+    } else {
+      sar = Math.max(sar, w[i-1].h, i>1 ? w[i-2].h : w[i-1].h);
+      if(w[i].h > sar){ up=true; sar=ep; ep=w[i].h; af=.02; bars=0; }
+      else { if(w[i].l<ep){ ep=w[i].l; af=Math.min(af+.02,.2); } bars++; }
+    }
+  }
+  return {up, bars};
+}
+function supertrend(w, p=10, m=3){
+  let dir = w[1].c>=w[0].c ? 1 : -1, fu=null, fl=null, bars=0; const trs=[];
+  for(let i=1;i<w.length;i++){
+    trs.push(trOf(w[i], w[i-1].c));
+    const a = mean(trs.slice(-p)), hl2=(w[i].h+w[i].l)/2, bu=hl2+m*a, bl=hl2-m*a;
+    if(fu===null){ fu=bu; fl=bl; }
+    else { fu = (bu<fu || w[i-1].c>fu) ? bu : fu; fl = (bl>fl || w[i-1].c<fl) ? bl : fl; }
+    if(dir===1 && w[i].c<fl){ dir=-1; bars=0; } else if(dir===-1 && w[i].c>fu){ dir=1; bars=0; } else bars++;
+  }
+  return {dir, bars, line: dir===1 ? fl : fu};
+}
+function adxCalc(w, p){
+  const pdm=[], mdm=[], tr=[];
+  for(let i=1;i<w.length;i++){
+    const up=w[i].h-w[i-1].h, dn=w[i-1].l-w[i].l;
+    pdm.push(up>dn && up>0 ? up : 0); mdm.push(dn>up && dn>0 ? dn : 0); tr.push(trOf(w[i], w[i-1].c));
+  }
+  let sp=pdm.slice(0,p).reduce((a,b)=>a+b,0), sm=mdm.slice(0,p).reduce((a,b)=>a+b,0), st=tr.slice(0,p).reduce((a,b)=>a+b,0);
+  const dx=[]; let pdi=0, mdi=0;
+  for(let i=p-1;i<pdm.length;i++){
+    if(i>p-1){ sp=sp-sp/p+pdm[i]; sm=sm-sm/p+mdm[i]; st=st-st/p+tr[i]; }
+    pdi=100*sp/(st||1e-9); mdi=100*sm/(st||1e-9);
+    dx.push(100*Math.abs(pdi-mdi)/((pdi+mdi)||1));
+  }
+  let adx = mean(dx.slice(0,p));
+  for(let i=p;i<dx.length;i++) adx=(adx*(p-1)+dx[i])/p;
+  return {pdi, mdi, adx};
+}
 
 function score(w){
-  const n=w.length, cl=w.map(c=>c.c), A=Math.max(atr(w),1e-6), last=w[n-1];
+  const WEIGHTS = weightsFor(S.volMode);
+  const n=w.length, cl=w.map(c=>c.c), hs=w.map(c=>c.h), ls=w.map(c=>c.l), med=w.map(c=>(c.h+c.l)/2);
+  const A=Math.max(atr(w),1e-6), last=w[n-1], c0=cl[n-1];
+  const trs = w.slice(1).map((c,i)=>trOf(c, w[i].c));
   const {slope,r2}=linreg(cl);
   const e8=ema(cl,8)[n-1], e21=ema(cl,21)[n-1];
   const k=Math.min(6,n-1);
   const m1=mean(cl.slice(-10)), m0=mean(cl.slice(-20,-10));
   const R=rsi(cl,Math.min(14,n-1));
-  const bb=cl.slice(-Math.min(20,n)), sma=mean(bb), sd=Math.sqrt(mean(bb.map(v=>(v-sma)**2)))||1e-6;
-  const z=(last.c-sma)/(2*sd);
+  const bb=cl.slice(-Math.min(20,n)), sma20=mean(bb), sd=Math.sqrt(mean(bb.map(v=>(v-sma20)**2)))||1e-6;
+  const z=(c0-sma20)/(2*sd);
   const rg=(last.h-last.l)||1e-6, lw=Math.min(last.o,last.c)-last.l, uw=last.h-Math.max(last.o,last.c);
   const body=c=>(c.c-c.o)/((c.h-c.l)||1e-6);
-  const f={
-    trend: Math.tanh(slope*(n-1)/(A*5))*(.5+.5*r2),
-    ema:   Math.tanh((e8-e21)/(A*1.2)),
-    mom:   Math.tanh((cl[n-1]-cl[n-1-k])/(A*2.5)),
-    struct:Math.tanh((m1-m0)/(A*2.5)),
-    rsi:   R<30 ? (30-R)/30 : R>70 ? -(R-70)/30 : (R-50)/120,
-    boll:  Math.abs(z)>.85 ? -Math.sign(z)*Math.min(1,(Math.abs(z)-.85)/.65)*.8 : 0,
-    candle:clamp(.5*(lw-uw)/rg + .3*body(last) + .2*body(w[n-2]), -1, 1)
-  };
-  let sc=0; for(const key in f) sc+=WEIGHTS[key]*f[key];
-  let agree=0, oppose=0;
-  const dir = sc>0 ? 1 : -1;
-  for(const key in f){
-    if(Math.abs(f[key])<.08) continue;
-    if(Math.sign(f[key])===dir) agree+=WEIGHTS[key]; else oppose+=WEIGHTS[key];
+
+  // --- الحجم
+  const vs=w.map(c=>c.v||0), mv=mean(vs)||1;
+  let num=0, den=0; for(const c of w.slice(-10)){ num+=(c.v||0)*body(c); den+=(c.v||0); }
+  const pressure = den ? num/den : 0;
+  const obvArr=[0]; for(let i=1;i<n;i++) obvArr.push(obvArr[i-1] + Math.sign(cl[i]-cl[i-1])*vs[i]);
+  const rv = mean(vs.slice(-3))/mv;
+
+  // --- اتجاه
+  const wma = wmaLast(cl,10), wmaPrev = wmaLast(cl.slice(0,-3),10);
+  const sma10 = mean(cl.slice(-10)), sma30 = mean(cl.slice(-Math.min(30,n)));
+  const sr = psar(w), sar = (sr.up?1:-1)*(sr.bars<=1 ? 1 : .7);
+  const stv = supertrend(w), st = stv.dir*(.6+.4*Math.min(1, Math.abs(c0-stv.line)/(2*A)));
+  // Ichimoku بفترات مصغّرة (4/10/20 مع إزاحة 10) لأن النافذة 30 شمعة فقط
+  const pT=4, pK=10, shf=10, pB=Math.max(6,Math.min(20,n-shf));
+  const mid=(i,p)=>{ const a=Math.max(0,i-p+1); return (Math.max(...hs.slice(a,i+1))+Math.min(...ls.slice(a,i+1)))/2; };
+  const tenkan=mid(n-1,pT), kijun=mid(n-1,pK), jj=n-1-shf, spA=(mid(jj,pT)+mid(jj,pK))/2, spB=mid(jj,pB);
+  const cTop=Math.max(spA,spB), cBot=Math.min(spA,spB);
+  const ichi = clamp((tenkan>kijun?.3:-.3) + (c0>cTop?.7 : c0<cBot?-.7 : 0), -1, 1);
+  // Alligator (SMMA 13/8/5 على السعر المتوسط، بإزاحة 8/5/3)
+  const jaw=seriesAt(smmaSeries(med,13), n-1-8), teeth=seriesAt(smmaSeries(med,8), n-1-5), lips=seriesAt(smmaSeries(med,5), n-1-3);
+  const sprd=Math.tanh((lips-jaw)/(A*1.5));
+  const gator = (lips>teeth && teeth>jaw) || (lips<teeth && teeth<jaw) ? Math.sign(lips-jaw)*(.5+.5*Math.abs(sprd)) : sprd*.3;
+  const ap=Math.max(5,Math.min(7+Math.floor((n-16)/2), 14)), ax=adxCalc(w, Math.min(14, Math.floor((n-1)/2)));
+  const adx = Math.tanh((ax.pdi-ax.mdi)/15)*clamp(ax.adx/35,.2,1);
+  const arp=Math.min(14,n-1), seg=w.slice(-(arp+1)); let ih=0, il=0;
+  seg.forEach((c,i)=>{ if(c.h>=seg[ih].h) ih=i; if(c.l<=seg[il].l) il=i; });
+  const aroon = (100*ih/arp - 100*il/arp)/100;
+  const vp=Math.min(14,n-1); let vmp=0,vmm=0,vtr=0;
+  for(let i=n-vp;i<n;i++){ vmp+=Math.abs(w[i].h-w[i-1].l); vmm+=Math.abs(w[i].l-w[i-1].h); vtr+=trOf(w[i],w[i-1].c); }
+  const vortex = Math.tanh((vmp-vmm)/(vtr||1e-9)*3);
+
+  // --- زخم ومذبذبات
+  const sp=Math.max(5,Math.min(14,n-5)), kRaw=[];
+  for(let i=sp-1;i<n;i++){ const a=i-sp+1, hh=Math.max(...hs.slice(a,i+1)), ll=Math.min(...ls.slice(a,i+1)); kRaw.push((cl[i]-ll)/((hh-ll)||1e-6)*100); }
+  const kS=[]; for(let i=2;i<kRaw.length;i++) kS.push(mean(kRaw.slice(i-2,i+1)));
+  const dS=[]; for(let i=2;i<kS.length;i++) dS.push(mean(kS.slice(i-2,i+1)));
+  const K=kS[kS.length-1], D=dS.length ? dS[dS.length-1] : K;
+  const stoch = clamp(clamp((K-D)/20,-1,1)*.5 + (K<20 ? (20-K)/20*.5 : K>80 ? -(K-80)/20*.5 : 0), -1, 1);
+  const e12=ema(cl,12), e26=ema(cl,26), macdS=e12.map((v,i)=>v-e26[i]), sigS=ema(macdS,9);
+  const macdV=macdS[n-1], hist=macdV-sigS[n-1];
+  const macd = .6*Math.tanh(hist/(A*.4)) + .4*Math.tanh(macdV/(A*1.2));
+  const cp=Math.min(20,n), tp=w.slice(-cp).map(c=>(c.h+c.l+c.c)/3), tpm=mean(tp), md=mean(tp.map(v=>Math.abs(v-tpm)))||1e-6;
+  const cciV=(tp[cp-1]-tpm)/(.015*md);
+  const cci = Math.abs(cciV)>200 ? -Math.sign(cciV)*.5 : clamp(cciV/150,-1,1)*.7;
+  const k10=Math.min(10,n-1), mom10=Math.tanh((cl[n-1]-cl[n-1-k10])/(A*3));
+  const aoAt=i=>{ const e=i+1; return mean(med.slice(Math.max(0,e-5),e)) - mean(med.slice(Math.max(0,e-Math.min(34,e)),e)); };
+  const aoV=aoAt(n-1), aoPrev=aoAt(n-3);
+  const ao = clamp(.7*Math.tanh(aoV/(A*1.5)) + .3*Math.tanh((aoV-aoPrev)/(A*.6)), -1, 1);
+  const rk=Math.min(9,n-5), roc=cl[n-1]-cl[n-1-rk], rocPrev=cl[n-4]-cl[n-4-rk];
+  const rocS = clamp(.6*Math.tanh(roc/(A*3)) + .4*Math.tanh((roc-rocPrev)/(A*1.5)), -1, 1);
+  const wp=Math.min(14,n), wh=Math.max(...hs.slice(-wp)), wl=Math.min(...ls.slice(-wp)), wpct=(c0-wl)/((wh-wl)||1e-6);
+  const wr = wpct<.2 ? (.2-wpct)/.2 : wpct>.8 ? -(wpct-.8)/.2 : (wpct-.5)*.4;
+  const dp=Math.min(14,n-1); let dmx=0, dmn=0;
+  for(let i=n-dp;i<n;i++){ dmx+=Math.max(w[i].h-w[i-1].h,0); dmn+=Math.max(w[i-1].l-w[i].l,0); }
+  const demV = dmx/((dmx+dmn)||1e-9);
+  const dem = demV<.3 ? (.3-demV)/.3 : demV>.7 ? -(demV-.7)/.3 : (demV-.5)*.6;
+
+  // --- تذبذب وقنوات
+  const atr5=mean(trs.slice(-5)), atrRatio=atr5/A, mv6=cl[n-1]-cl[n-1-k];
+  const atrS = Math.tanh(mv6/(A*2.5))*Math.tanh(Math.max(0,atrRatio-.9)*2.5);
+  const e20=ema(cl,20)[n-1], at10=Math.max(atr(w,10),1e-6), kz=(c0-e20)/(2*at10), kelt=clamp(kz*.9,-1,1);
+  const dp2=Math.min(20,n), dh=Math.max(...hs.slice(-dp2,-1)), dl=Math.min(...ls.slice(-dp2,-1));
+  const donch = c0>dh ? 1 : c0<dl ? -1 : ((c0-dl)/((dh-dl)||1e-6)-.5);
+  const ed=(c0-sma20)/(1.2*A);
+  const env = ed>1 ? -Math.min(1,ed-1)*.8 : ed<-1 ? Math.min(1,-ed-1)*.8 : ed*.3;
+
+  // --- حركة السعر: Fractal
+  let upF=null, dnF=null;
+  for(let i=2;i<=n-3;i++){
+    if(hs[i]>hs[i-1] && hs[i]>hs[i-2] && hs[i]>hs[i+1] && hs[i]>hs[i+2]) upF=hs[i];
+    if(ls[i]<ls[i-1] && ls[i]<ls[i-2] && ls[i]<ls[i+1] && ls[i]<ls[i+2]) dnF=ls[i];
   }
-  return {score:sc, f, A, r2, R, agreement: agree/(agree+oppose+1e-9), strength: Math.min(1, Math.abs(sc)/.45)};
+  const fractal = upF!=null && c0>upF ? .8 : dnF!=null && c0<dnF ? -.8 : (upF!=null && dnF!=null ? ((c0-dnF)/((upF-dnF)||1e-6)-.5)*.6 : 0);
+
+  const f={
+    reg: Math.tanh(slope*(n-1)/(A*5))*(.5+.5*r2),
+    struct: Math.tanh((m1-m0)/(A*2.5)),
+    ema: Math.tanh((e8-e21)/(A*1.2)),
+    ma: .6*Math.tanh((c0-wma)/(A*1.2)) + .4*Math.tanh((wma-wmaPrev)/(A*.8)),
+    sma: Math.tanh((sma10-sma30)/(A*1.2)),
+    sar, ichi, gator, st, adx, aroon, vortex,
+    mom: Math.tanh((cl[n-1]-cl[n-1-k])/(A*2.5)),
+    rsi: R<30 ? (30-R)/30 : R>70 ? -(R-70)/30 : (R-50)/120,
+    stoch, macd, cci, mom10, ao, roc:rocS, wr, dem,
+    boll: Math.abs(z)>.85 ? -Math.sign(z)*Math.min(1,(Math.abs(z)-.85)/.65)*.8 : 0,
+    atr:atrS, kelt, donch, env,
+    fractal,
+    candle: clamp(.5*(lw-uw)/rg + .3*body(last) + .2*body(w[n-2]), -1, 1),
+    vol: clamp(1.6*pressure, -1, 1),
+    obv: Math.tanh(linreg(obvArr).slope*(n-1)/(mv*4))
+  };
+  for(const key in f) if(!isFinite(f[key])) f[key]=0;
+  f.reg = clamp(f.reg,-1,1);
+
+  let sc=0; for(const key in f) sc+=WEIGHTS[key]*f[key];
+  const dir = sc>0 ? 1 : -1;
+  // التوافق يُقاس على مستوى المجموعات الخمس وليس المؤشرات الفردية، لأن كثيرًا منها متقارب ويكرر نفس المعلومة
+  let agree=0, oppose=0;
+  const cats = CATS.map(c => {
+    const ws = c.keys.reduce((t,key)=>t+WEIGHTS[key],0);
+    const value = c.keys.reduce((t,key)=>t+WEIGHTS[key]*f[key],0)/ws;
+    if(Math.abs(value)>=.06){ if(Math.sign(value)===dir) agree+=ws; else oppose+=ws; }
+    return {key:c.key, name:c.name, keys:c.keys, value, w:ws};
+  });
+  const all = Object.values(f);
+  return {score:sc, f, cats, A, r2, R, rv, adx:ax.adx,
+    bull: all.filter(v=>v>.08).length, bear: all.filter(v=>v<-.08).length, total: all.length,
+    agreement: agree/(agree+oppose+1e-9), strength: Math.min(1, Math.abs(sc)/.40)};
 }
 
 const sig = v => 1/(1+Math.exp(-v));
@@ -427,24 +640,63 @@ function analyze(){
   const nowP = lastC.c;
   const delta = dir * Math.abs(cur.score) * cur.A * Math.sqrt(HZ) * 1.1;
   const band = cur.A * Math.sqrt(HZ) * .9;
-  return {...cur, dir, signal:Math.round(signal), final, grade, hit, n, histAdj, nowP, delta, band, colors, cn, ch, used: win.length};
+  return {...cur, dir, signal:Math.round(signal), final, grade, hit, n, histAdj, nowP, delta, band, colors, cn, ch, volMode:S.volMode, rv:cur.rv, used: win.length};
 }
 
 /* ---------- تشغيل ---------- */
+// لوحة الحجم أسفل الشارت تُستبعد من منطقة قراءة الشموع حتى لا تُقرأ أعمدتها الخضراء والحمراء كشموع
+function clipRegion(){
+  const r = {...S.region}, v = S.volRegion;
+  if(v && v.y0 > r.y0+40 && v.y0 < r.y1) r.y1 = v.y0-2;
+  return r;
+}
+// قراءة ارتفاع عمود الحجم تحت كل شمعة: نقيس من قاعدة اللوحة لأعلى طالما اللون يختلف عن الخلفية
+function readVolumes(list, vr){
+  const {W,data} = S, px = (x,y) => { const i=(Math.round(y)*W+Math.round(x))*4; return [data[i],data[i+1],data[i+2]]; };
+  const y1 = Math.floor(vr.y1), y0 = Math.ceil(vr.y0), samp = [];
+  for(let i=1;i<list.length;i++){ const gx=(list[i-1].x+list[i].x)/2; for(const f of [.15,.4,.7]) samp.push(px(gx, y0+(y1-y0)*f)); }
+  if(!samp.length) return false;
+  const med = ch => samp.map(p=>p[ch]).sort((a,b)=>a-b)[samp.length>>1];
+  const bg = [med(0),med(1),med(2)];
+  const dist = p => Math.abs(p[0]-bg[0])+Math.abs(p[1]-bg[1])+Math.abs(p[2]-bg[2]);
+  let ok = 0;
+  for(const c of list){
+    let best = 0;
+    for(let dx=-2; dx<=2; dx++){
+      let h=0, miss=0;
+      for(let y=y1; y>=y0; y--){
+        if(dist(px(c.x+dx,y)) > 40){ h++; miss=0; } else if(++miss>2) break;
+      }
+      best = Math.max(best,h);
+    }
+    c.v = best; c.vy = y1-best+1; if(best>2) ok++;
+  }
+  return ok >= list.length*.6;
+}
+
 function run(){
-  let r = extract(S.region, 70);
-  if(r.list.length < 16) { const r2 = extract(S.region, 120); if(r2.list.length > r.list.length) r = r2; }
+  const reg = clipRegion();
+  let r = extract(reg, 70);
+  if(r.list.length < 16) { const r2 = extract(reg, 120); if(r2.list.length > r.list.length) r = r2; }
   S.candles = r.list; S.bw = r.bw; S.step = r.step;
   S.result = null;
   if(r.list.length < 16){
     hint('قرأتُ ' + r.list.length + ' شمعة فقط. حدّد منطقة الشارت يدويًا (الزر بالأعلى) بحيث تحتوي الشموع فقط.', true);
     renderResult(null); render(); return;
   }
+  let volNote = ' الحجم: بديل (مدى الشمعة) لأنه لا توجد لوحة حجم محددة.';
+  S.volMode = 'proxy';
+  if(S.volRegion){
+    if(readVolumes(r.list, S.volRegion)){ S.volMode = 'real'; volNote = ' الحجم: مقروء من اللقطة.'; }
+    else volNote = ' تعذّرت قراءة أعمدة الحجم من المنطقة المحددة، استُخدم البديل (مدى الشمعة).';
+  }
+  if(S.volMode==='proxy') r.list.forEach(c => { c.v = Math.max(c.h-c.l, 1); c.vy = null; });
   const res = analyze();
   if(!res){ hint('عدد الشموع المكتملة غير كافٍ للتحليل.', true); renderResult(null); render(); return; }
   S.result = res;
+  res.pers = persistence(res);
   const live = S.skipLive ? ' (الأخيرة مستثناة لأنها لم تكتمل)' : '';
-  hint('تمت قراءة ' + r.list.length + ' شمعة' + live + '. راجع المربعات على الصورة للتأكد من صحة القراءة.', res.used < N);
+  hint('تمت قراءة ' + r.list.length + ' شمعة' + live + '.' + volNote, res.used < N || (S.volRegion && S.volMode!=='real'));
   renderResult(res); render();
 }
 
@@ -483,6 +735,14 @@ function render(){
     });
     ctx.setLineDash([]);
   }
+  if(S.volRegion){
+    const v = S.volRegion; ctx.save();
+    ctx.setLineDash([9*u,6*u]); ctx.lineWidth = 1.5*u; ctx.strokeStyle = 'rgba(182,156,255,.85)';
+    ctx.strokeRect(v.x0, v.y0, v.x1-v.x0, v.y1-v.y0); ctx.setLineDash([]);
+    if(S.boxes && S.volMode==='real'){ ctx.strokeStyle='#b69cff'; ctx.lineWidth=2.2*u;
+      S.candles.forEach(c => { if(c.vy==null) return; ctx.beginPath(); ctx.moveTo(c.x-S.bw/2,c.vy); ctx.lineTo(c.x+S.bw/2,c.vy); ctx.stroke(); }); }
+    ctx.restore();
+  }
   // نقاط المعايرة
   S.calib.forEach((c,i) => {
     if(c.y==null) return;
@@ -517,6 +777,7 @@ function render(){
     });
     ctx.restore();
   }
+  drawPers(u);
 }
 
 /* ---------- لوحة النتيجة ---------- */
@@ -552,11 +813,13 @@ function renderResult(r){
     return `<div class="cc${c.conf<55?' lo':''}"><div class="cd"><i class="wk" style="top:${top-5}px;height:${h+10}px;background:${col}"></i><i class="bd" style="top:${top}px;height:${Math.max(h,3)}px;background:${col}"></i></div><b class="num" style="color:${col}">${c.up?'صاعدة':'هابطة'}</b><span class="num">${c.conf}%</span></div>`;
   }).join('');
   const colorAcc = r.cn>=24 ? `${Math.round(r.ch/r.cn*100)}% (${r.ch}/${r.cn})` : 'عينة صغيرة';
-  const votes = Object.keys(r.f).map(k => {
-    const v = r.f[k], w = Math.abs(v)*50, col = v>=0 ? 'var(--up)' : 'var(--down)';
-    const pos = v>=0 ? `inset-inline-start:50%;width:${w}%` : `inset-inline-end:50%;width:${w}%`;
-    return `<div class="vote"><span>${NAMES[k]}</span><div class="bar"><i style="${pos};background:${col}"></i></div><em class="num">${v>=0?'+':'−'}${Math.abs(v).toFixed(2)}</em></div>`;
-  }).join('');
+  const barHtml = v => {
+    const col = v>=0 ? 'var(--up)' : 'var(--down)', pos = v>=0 ? `inset-inline-start:50%;width:${Math.min(50,Math.abs(v)*50)}%` : `inset-inline-end:50%;width:${Math.min(50,Math.abs(v)*50)}%`;
+    return `<div class="bar"><i style="${pos};background:${col}"></i></div>`;
+  };
+  const num = v => `<em class="num">${v>=0?'+':'−'}${Math.abs(v).toFixed(2)}</em>`;
+  const votes = r.cats.map(c => `<details class="cat"><summary><span class="catbar">${c.name}</span>${barHtml(c.value)}${num(c.value)}</summary>
+      <div class="votes">${c.keys.map(k => `<div class="vote"><span>${NAMES[k]}</span>${barHtml(r.f[k])}${num(r.f[k])}</div>`).join('')}</div></details>`).join('');
   const hist = r.n>=12 ? `<span class="num">${r.hit} / ${r.n}</span> (${Math.round(r.hit/r.n*100)}%)` : 'عينة صغيرة';
   box.innerHTML = `
   <div class="res" data-dir="${dirKey}">
@@ -578,14 +841,19 @@ function renderResult(r){
     <h3>لون الشموع الستة القادمة</h3>
     <div class="colors">${cols}</div>
     <div class="cclab"><span>الشمعة 1 (الأقرب)</span><span>الشمعة 6</span></div>
-    <h3>تصويت المؤشرات</h3>
-    <div class="votes">${votes}</div>
+    ${persHtml(r)}
+    <h3>تصويت المؤشرات (${r.total}) — اضغط على كل مجموعة للتفاصيل</h3>
+    <div>${votes}</div>
     <h3>تفاصيل الموثوقية</h3>
     <div class="facts">
       <div><span>قوة وتوافق المؤشرات</span><b class="num">${r.signal}%</b></div>
       <div><span>اختبار رجعي على الشارت</span><b>${hist}</b></div>
       <div><span>جودة الاتجاه R²</span><b class="num">${r.r2.toFixed(2)}</b></div>
       <div><span>RSI</span><b class="num">${r.R.toFixed(0)}</b></div>
+      <div><span>مصدر الحجم</span><b>${r.volMode==='real' ? 'حقيقي من اللقطة' : 'بديل (مدى الشمعة)'}</b></div>
+      <div><span>الحجم النسبي (آخر 3)</span><b class="num">${r.rv.toFixed(2)}×</b></div>
+      <div><span>مؤشرات صاعدة / هابطة</span><b class="num">${r.bull} / ${r.bear}</b></div>
+      <div><span>قوة الاتجاه ADX</span><b class="num">${r.adx.toFixed(0)}</b></div>
       <div><span>دقة الألوان تاريخيًا</span><b class="num">${colorAcc}</b></div>
     </div>
     <p class="note">الموثوقية تقدير إحصائي من الشموع الظاهرة في اللقطة (توافق المؤشرات + نجاحها على نفس الشارت)، وليست ضمانًا لنتيجة الصفقة. أسعار OTC يولّدها الوسيط وقد لا تتبع منطق السوق الحقيقي.</p>
@@ -593,6 +861,113 @@ function renderResult(r){
   requestAnimationFrame(() => requestAnimationFrame(() => {
     const g = $('#gval'); if(g) g.setAttribute('stroke-dasharray', `${(clamp(frac,0,1)*circ).toFixed(1)} ${circ.toFixed(1)}`);
   }));
+}
+
+/* ====== استمرار الاتجاه 3–4 شموع بدون ضغط على الصفقة (إضافة) ======
+   «الضغط» = أن يعود السعر ضد الصفقة بأكثر من (حد الخوف × ATR) خلال الشموع، أو أن يكون الإغلاق عند الشمعة 3/4 عكس الاتجاه.
+   ثلاث طبقات: (1) محاكاة من حركة الشارت نفسه (ذيول وتناوب حقيقي) مع ميل النموذج،
+   (2) تجربة نفس المنطق على الشموع الأقدم في اللقطة، (3) خصم لعيوب OTC (ذيول، تناوب، طفرات، إجهاد، ضوضاء). */
+function persistence(res){
+  const dir = res.dir; if(!dir) return null;
+  const all = S.candles, base = S.skipLive ? all.slice(0,-1) : all.slice(), win = base.slice(-N);
+  const A = res.A, m = S.fear, thr = m*A;
+
+  // (1) محاكاة bootstrap بكتل من شمعتين من آخر 30 شمعة، مع إزاحة الميل لتطابق اتجاه النموذج
+  const mv = win.slice(1).map((c,i) => ({dc:c.c-win[i].c, dh:c.h-win[i].c, dl:c.l-win[i].c}));
+  const mdc = mean(mv.map(x=>x.dc)), drift = dir*Math.abs(res.score)*A*.35, shift = drift-mdc;
+  let seed = 987654321; const rnd = () => { seed = (Math.imul(seed,1664525)+1013904223)>>>0; return seed/4294967296; };
+  const T = 3000, worsts = []; let c3=0, c4=0;
+  for(let t=0;t<T;t++){
+    const seq = []; while(seq.length<PH){ const i = Math.floor(rnd()*(mv.length-1)); seq.push(mv[i], mv[i+1]); }
+    let price=0, worst=0;
+    for(let k=0;k<PH;k++){
+      const q=seq[k], dc=q.dc+shift, dl=q.dl+shift, dh=q.dh+shift;
+      const adv = dir>0 ? -(price+Math.min(dl,dc)) : (price+Math.max(dh,dc));
+      worst = Math.max(worst, adv); price += dc;
+      const ok = worst<=thr && dir*price>0;
+      if(k===2 && ok) c3++; if(k===3 && ok) c4++;
+    }
+    worsts.push(worst/A);
+  }
+  const mc3=c3/T, mc4=c4/T; worsts.sort((a,b)=>a-b);
+
+  // (2) اختبار رجعي: كم مرة تلت إشارة المنطق 3/4 شموع نظيفة في نفس اللقطة
+  let n=0, h3=0, h4=0;
+  for(let t=base.length-1-PH; t>=15; t--){
+    const w = base.slice(Math.max(0,t-N+1), t+1), sc = score(w).score;
+    if(Math.abs(sc)<.03) continue;
+    const d = sc>0?1:-1, At = Math.max(atr(w),1e-6), entry = base[t].c; let worst=0, ok3=false, ok4=false;
+    for(let k=1;k<=PH;k++){
+      const c = base[t+k], adv = d>0 ? entry-c.l : c.h-entry; worst = Math.max(worst, adv);
+      const ok = worst<=m*At && d*(c.c-entry)>0; if(k===3) ok3=ok; if(k===4) ok4=ok;
+    }
+    n++; if(ok3) h3++; if(ok4) h4++;
+  }
+
+  // (3) عيوب OTC
+  const last10 = win.slice(-10);
+  const wick = mean(last10.map(c => { const rg=(c.h-c.l)||1e-6; return (rg-Math.abs(c.c-c.o))/rg; }));
+  const cols = win.slice(-20).map(c=>c.c>=c.o); let alt=0; for(let i=1;i<cols.length;i++) if(cols[i]!==cols[i-1]) alt++;
+  alt /= (cols.length-1);
+  const rgAvg = mean(win.map(c=>c.h-c.l)), spike = win.slice(-5).some(c => (c.h-c.l) > 2.3*rgAvg);
+  let run=0; for(let i=base.length-1;i>=0;i--){ if((base[i].c>=base[i].o)===(dir>0)) run++; else break; }
+  const sg = win.slice(-11).map(c=>c.c); let path=0; for(let i=1;i<sg.length;i++) path += Math.abs(sg[i]-sg[i-1]);
+  const er = Math.abs(sg[sg.length-1]-sg[0])/(path||1e-6);
+  const flags = [];
+  if(wick>.62) flags.push(`ذيول طويلة (${Math.round(wick*100)}% من المدى) — حركة متقطعة`);
+  if(alt>.6) flags.push(`تناوب ألوان مرتفع (${Math.round(alt*100)}%)`);
+  if(spike) flags.push('شمعة طفرة حديثة (مدى أكبر من 2.3× المتوسط) — قد يعود السعر');
+  if(run>=5) flags.push(`${run} شموع متتالية بنفس الاتجاه — إجهاد وقد يرتد`);
+  if(er<.25) flags.push(`كفاءة الحركة منخفضة (${er.toFixed(2)}) — ضوضاء أكثر من اتجاه`);
+  const penalty = S.otc ? Math.min(.30, flags.length*.07) : Math.min(.15, flags.length*.035);
+
+  const fin = (mc,h) => { const p = n>=8 ? (h+20*mc)/(n+20) : mc; return clamp(p*(1-penalty), .05, .78); };
+  const p3 = Math.round(fin(mc3,h3)*100), p4 = Math.round(fin(mc4,h4)*100);
+  const avg = (p3+p4)/2;
+  return {p3, p4, mc3:Math.round(mc3*100), mc4:Math.round(mc4*100), h3, h4, n, thr, flags, penalty,
+    medAdv: worsts[T>>1], p80Adv: worsts[Math.floor(T*.8)],
+    runSame: res.colors.slice(0,4).filter(c => c.up===(dir>0)).length,
+    level: avg>=62 ? 'good' : avg>=48 ? 'mid' : 'bad'};
+}
+
+function drawPers(u){
+  const r = S.result; if(!r || !r.pers || !r.dir || !S.candles.length) return;
+  const P = r.pers, last = S.candles[S.candles.length-1];
+  const y0 = last.yc, yT = y0 + r.dir*P.thr, x0 = last.x, x1 = Math.min(S.W-6*u, last.x + (PH+.5)*S.step);
+  ctx.save();
+  ctx.globalAlpha = .1; ctx.fillStyle = '#f4c15d'; ctx.fillRect(x0, Math.min(y0,yT), x1-x0, Math.abs(yT-y0));
+  ctx.globalAlpha = 1; ctx.strokeStyle = '#f4c15d'; ctx.lineWidth = 1.8*u; ctx.setLineDash([7*u,5*u]);
+  ctx.beginPath(); ctx.moveTo(x0, yT); ctx.lineTo(x1, yT); ctx.stroke();
+  ctx.setLineDash([]); ctx.font = `700 ${11*u}px sans-serif`; ctx.textAlign = 'right'; ctx.fillStyle = '#f4c15d';
+  ctx.fillText('حد الخوف', x1, yT + (r.dir>0 ? 13*u : -5*u));
+  ctx.restore();
+}
+
+function persHtml(r){
+  const P = r.pers;
+  if(!P) return '<h3>استمرار الاتجاه 3–4 شموع</h3><p class="sub">لا يوجد اتجاه واضح لتقييم الاستمرارية.</p>';
+  const lv = p => p>=62 ? 'good' : p>=48 ? 'mid' : 'bad';
+  const word = {good:'استمرارية جيدة — احتمال ضغط على الصفقة أقل', mid:'استمرارية متوسطة — قد يظهر ضغط مؤقت', bad:'استمرارية ضعيفة — احتمال كبير أن يضغط السعر على الصفقة'}[P.level];
+  const hist = P.n>=8 ? `${P.h3}/${P.n} · ${P.h4}/${P.n}` : 'عينة صغيرة';
+  const fl = P.flags.length ? `<ul>${P.flags.map(f=>`<li>${f}</li>`).join('')}</ul>` : '<ul><li>لا تنبيهات OTC ظاهرة في الشموع الأخيرة</li></ul>';
+  return `<h3>استمرار الاتجاه 3–4 شموع بدون ضغط على الصفقة</h3>
+    <div class="pers">
+      <div class="two">
+        <div class="pc"><small>3 شموع</small><b class="num ${lv(P.p3)}">${P.p3}%</b></div>
+        <div class="pc"><small>4 شموع</small><b class="num ${lv(P.p4)}">${P.p4}%</b></div>
+      </div>
+      <p class="verdict2 ${P.level}">${word}</p>
+      <div class="mini">
+        <div><span>حد الخوف (ضد الصفقة)</span><b class="num">${S.fear} ATR</b></div>
+        <div><span>تراجع محتمل (80%)</span><b class="num">≤ ${P.p80Adv.toFixed(2)} ATR</b></div>
+        <div><span>شموع متوقعة بنفس الاتجاه (من 4)</span><b class="num">${P.runSame}</b></div>
+        <div><span>اختبار رجعي (3 · 4)</span><b class="num">${hist}</b></div>
+        <div><span>محاكاة بدون خصم (3 · 4)</span><b class="num">${P.mc3}% · ${P.mc4}%</b></div>
+        <div><span>خصم عيوب ${S.otc?'OTC':'السوق'}</span><b class="num">−${Math.round(P.penalty*100)}%</b></div>
+      </div>
+      <h3 style="margin:14px 0 4px">تنبيهات ${S.otc?'OTC':'الحركة'}</h3>${fl}
+      <p class="why">النسبة تعني: احتمال أن يمضي السعر مع الاتجاه حتى الشمعة 3 أو 4 دون أن يتجاوز حد الخوف ضد الصفقة (ويُرسم على الصورة كخط أصفر). مصدرها محاكاة من حركة هذا الشارت نفسه + اختبار رجعي، وسقفها 78% عمدًا.</p>
+    </div>`;
 }
 
 function hint(t, warn){ const h=$('#hint'); h.textContent=t; h.classList.toggle('warn', !!warn); }
@@ -607,14 +982,17 @@ function setMode(m){
   cv.classList.toggle('crosshair', !!m);
   cv.style.touchAction = m ? 'none' : 'auto';
   $('#btnRegion').classList.toggle('on', m==='region');
+  $('#btnVol').classList.toggle('on', m==='vol');
   document.querySelectorAll('[data-pick]').forEach(b => b.classList.toggle('on', m==='pick'+b.dataset.pick));
   if(m==='region') hint('اسحب على الصورة لتحديد مستطيل يحتوي الشموع فقط (بدون الأسعار والأزرار).');
+  else if(m==='vol') hint('اسحب على لوحة أعمدة الحجم أسفل الشارت (الأعمدة فقط، وبنفس محور الزمن مثل الشموع).');
   else if(m) hint('اضغط على الصورة عند الخط الذي تعرف سعره.');
 }
 cv.addEventListener('pointerdown', e => {
   const p = toImg(e);
-  if(S.mode==='region'){
-    S.drag = p; S.region = {x0:p.x,y0:p.y,x1:p.x,y1:p.y}; cv.setPointerCapture(e.pointerId); render();
+  if(S.mode==='region' || S.mode==='vol'){
+    S.dragKey = S.mode==='vol' ? 'volRegion' : 'region';
+    S.drag = p; S[S.dragKey] = {x0:p.x,y0:p.y,x1:p.x,y1:p.y}; cv.setPointerCapture(e.pointerId); render();
   } else if(S.mode && S.mode.startsWith('pick')){
     const i = +S.mode.slice(4);
     S.calib[i].y = p.y; $('#y'+i).textContent = 'تم'; setMode(null);
@@ -623,14 +1001,15 @@ cv.addEventListener('pointerdown', e => {
 });
 cv.addEventListener('pointermove', e => {
   if(!S.drag) return;
-  const p = toImg(e); S.region = {x0:S.drag.x, y0:S.drag.y, x1:p.x, y1:p.y}; render();
+  const p = toImg(e); S[S.dragKey] = {x0:S.drag.x, y0:S.drag.y, x1:p.x, y1:p.y}; render();
 });
 cv.addEventListener('pointerup', () => {
   if(!S.drag) return;
-  const r = S.region;
-  S.region = {x0:Math.max(0,Math.min(r.x0,r.x1)), y0:Math.max(0,Math.min(r.y0,r.y1)), x1:Math.min(S.W-1,Math.max(r.x0,r.x1)), y1:Math.min(S.H-1,Math.max(r.y0,r.y1))};
+  const k = S.dragKey, r = S[k];
+  S[k] = {x0:Math.max(0,Math.min(r.x0,r.x1)), y0:Math.max(0,Math.min(r.y0,r.y1)), x1:Math.min(S.W-1,Math.max(r.x0,r.x1)), y1:Math.min(S.H-1,Math.max(r.y0,r.y1))};
   S.drag = null; setMode(null);
-  if(S.region.x1-S.region.x0 < 60 || S.region.y1-S.region.y0 < 60){ S.region = autoRegion(); }
+  if(S[k].x1-S[k].x0 < 60 || S[k].y1-S[k].y0 < 12){ S[k] = k==='region' ? autoRegion() : null; }
+  $('#btnVolClear').hidden = !S.volRegion;
   run();
 });
 function readCalib(){
@@ -642,10 +1021,14 @@ function readCalib(){
 document.querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => setMode(S.mode==='pick'+b.dataset.pick ? null : 'pick'+b.dataset.pick)));
 ['p0','p1'].forEach(id => $('#'+id).addEventListener('input', () => { readCalib(); if(S.result){ renderResult(S.result); render(); } }));
 $('#btnRegion').addEventListener('click', () => setMode(S.mode==='region' ? null : 'region'));
-$('#btnNew').addEventListener('click', () => { $('#stage').hidden = true; $('#drop').hidden = false; $('#file').value=''; S.result=null; S.base=null; renderResult(null); $('#result').innerHTML = '<div class="empty"><div>سيظهر التوقع هنا بعد رفع الصورة</div></div>'; });
+$('#btnVol').addEventListener('click', () => setMode(S.mode==='vol' ? null : 'vol'));
+$('#btnVolClear').addEventListener('click', () => { S.volRegion = null; $('#btnVolClear').hidden = true; if(S.base) run(); });
+$('#btnNew').addEventListener('click', () => { $('#stage').hidden = true; $('#drop').hidden = false; $('#file').value=''; S.result=null; S.base=null; S.volRegion=null; $('#btnVolClear').hidden=true; renderResult(null); $('#result').innerHTML = '<div class="empty"><div>سيظهر التوقع هنا بعد رفع الصورة</div></div>'; });
 $('#optBoxes').addEventListener('change', e => { S.boxes = e.target.checked; render(); });
 $('#optLive').addEventListener('change', e => { S.skipLive = e.target.checked; if(S.base) run(); });
 
+$('#optOtc').addEventListener('change', e => { S.otc = e.target.checked; if(S.base) run(); });
+$('#fear').addEventListener('change', e => { S.fear = parseFloat(e.target.value); if(S.base) run(); });
 $('#file').addEventListener('change', e => loadFile(e.target.files[0]));
 const drop = $('#drop');
 ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
@@ -660,7 +1043,7 @@ window.addEventListener('dragover', e => e.preventDefault());
 window.addEventListener('drop', e => { if(!drop.contains(e.target)){ e.preventDefault(); if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); } });
 
 // للاختبار الآلي
-window.__S = S;
+window.__S = S; window.__run = run; window.__score = score;
 })();
 </script>
 </body>
