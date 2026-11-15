@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>قارئ الشموع — 31 مؤشرًا + ATR + استمرار الاتجاه — OTC</title>
+<title>قارئ الشموع — 33 مؤشرًا + دعم/مقاومة + FVG + ATR — OTC</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@600;700&display=swap" rel="stylesheet">
@@ -170,6 +170,18 @@ details.cat .vote{font-size:12.5px;color:#cfe3da}
 .chips{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;direction:ltr;margin-top:8px}
 .chips span{background:var(--panel);border:1px solid var(--line);border-radius:5px;font-size:11.5px;text-align:center;padding:2px 0}
 .chips span i{font-style:normal;color:var(--mute)}
+.lvbox{background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:14px}
+.lvbox .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lvbox .lc{border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--panel)}
+.lvbox .lc small{display:block;color:var(--mute);font-size:12.5px}
+.lvbox .lc b{font-size:15px;font-weight:600}
+.lvbox .lc.r b{color:#e69cff}.lvbox .lc.s b{color:#6fe3d9}
+.lvbox ul{margin:10px 0 0;padding:0;list-style:none;font-size:12.5px;color:#cfe3da}
+.lvbox li{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #1f4a41;padding:4px 0}
+.lvbox li i{font-style:normal;color:var(--mute)}
+.lvbox .tilt{margin:10px 0 0;font-weight:600;font-size:14px}
+.lvbox .why{margin:10px 0 0;font-size:12px;color:var(--mute)}
+.lvbox .eff{margin:10px 0 0;font-size:12.5px;color:#cfe3da;border-top:1px solid var(--line);padding-top:8px}
 @media(prefers-reduced-motion:reduce){.gauge .val{transition:none}}
 @media(max-width:520px){.verdict{font-size:44px}.vote{grid-template-columns:104px 1fr 40px}details.cat summary{grid-template-columns:104px 1fr 40px 12px}.spec{margin-inline-start:0}}
 </style>
@@ -190,7 +202,7 @@ details.cat .vote{font-size:12.5px;color:#cfe3da}
   </div>
   <div class="spec">
     <span class="chip">الإطار <b class="num">M3</b></span>
-    <span class="chip"><b class="num">30</b> شمعة · <b class="num">31</b> مؤشرًا</span>
+    <span class="chip"><b class="num">30</b> شمعة · <b class="num">33</b> مؤشرًا</span>
     <span class="chip">يتوقع بعد <b class="num">6</b> شموع (<b class="num">15</b> د)</span>
   </div>
 </header>
@@ -375,18 +387,19 @@ const NAMES = {
   mom:'زخم 6 شموع', rsi:'RSI', stoch:'Stochastic', macd:'MACD', cci:'CCI', mom10:'Momentum 10', ao:'Awesome Oscillator',
   roc:'Rate of Change', wr:'Williams %R', dem:'DeMarker',
   boll:'Bollinger Bands', atr:'ATR (توسع التذبذب)', kelt:'Keltner Channel', donch:'Donchian Channel', env:'Envelopes',
-  fractal:'Fractal', candle:'الشموع الأخيرة', vol:'Volume (ضغط الحجم)', obv:'OBV'
+  fractal:'Fractal', sr:'الدعم والمقاومة', fvg:'Fair Value Gap', candle:'الشموع الأخيرة', vol:'Volume (ضغط الحجم)', obv:'OBV'
 };
 const CATS = [
   {key:'trend', name:'الاتجاه', keys:['reg','struct','ema','ma','sma','sar','ichi','gator','st','adx','aroon','vortex']},
   {key:'mom', name:'الزخم والمذبذبات', keys:['mom','rsi','stoch','macd','cci','mom10','ao','roc','wr','dem']},
   {key:'volat', name:'التذبذب والقنوات', keys:['boll','atr','kelt','donch','env']},
   {key:'price', name:'حركة السعر', keys:['fractal','candle']},
+  {key:'levels', name:'الدعم والمقاومة وFVG', keys:['sr','fvg']},
   {key:'volume', name:'الحجم', keys:['vol','obv']}
 ];
 const W0 = {reg:.06,struct:.03,ema:.04,ma:.03,sma:.03,sar:.04,ichi:.04,gator:.03,st:.04,adx:.04,aroon:.03,vortex:.03,
   mom:.03,rsi:.04,stoch:.03,macd:.04,cci:.03,mom10:.02,ao:.03,roc:.02,wr:.03,dem:.03,
-  boll:.03,atr:.02,kelt:.03,donch:.03,env:.02, fractal:.03,candle:.09};
+  boll:.03,atr:.02,kelt:.03,donch:.03,env:.02, fractal:.03,candle:.09, sr:.05,fvg:.04};
 function weightsFor(mode){
   const volW = mode==='real' ? .20 : .06;
   const tot = Object.values(W0).reduce((a,b)=>a+b,0), k = (1-volW)/tot, w = {};
@@ -449,6 +462,58 @@ function adxCalc(w, p){
   let adx = mean(dx.slice(0,p));
   for(let i=p;i<dx.length;i++) adx=(adx*(p-1)+dx[i])/p;
   return {pdi, mdi, adx};
+}
+function levelsInfo(w, A){
+  const n=w.length, hs=w.map(c=>c.h), ls=w.map(c=>c.l), price=w[n-1].c, prev=w[n-2].c;
+  const piv=[];
+  for(let i=2;i<=n-3;i++){
+    if(hs[i]>hs[i-1] && hs[i]>hs[i-2] && hs[i]>hs[i+1] && hs[i]>hs[i+2]) piv.push({p:hs[i],i});
+    if(ls[i]<ls[i-1] && ls[i]<ls[i-2] && ls[i]<ls[i+1] && ls[i]<ls[i+2]) piv.push({p:ls[i],i});
+  }
+  const mxH=Math.max(...hs), mnL=Math.min(...ls), ih=hs.indexOf(mxH), il=ls.indexOf(mnL);
+  if(!piv.some(q=>q.i===ih && q.p===mxH)) piv.push({p:mxH,i:ih});
+  if(!piv.some(q=>q.i===il && q.p===mnL)) piv.push({p:mnL,i:il});
+  piv.sort((a,b)=>a.p-b.p);
+  const zs=[];
+  for(const q of piv){
+    const z=zs[zs.length-1];
+    if(z && q.p-z.max<=.35*A && q.p-z.min<=.8*A){ z.pts.push(q); z.max=q.p; } else zs.push({pts:[q],min:q.p,max:q.p});
+  }
+  const zones = zs.map(z => ({p:mean(z.pts.map(q=>q.p)), lo:z.min, hi:z.max, touches:z.pts.length, first:Math.min(...z.pts.map(q=>q.i)), last:Math.max(...z.pts.map(q=>q.i))}));
+  const sup = zones.filter(z=>z.p<=price).sort((a,b)=>b.p-a.p), res = zones.filter(z=>z.p>price).sort((a,b)=>a.p-b.p);
+  const nearS = sup[0]||null, nearR = res[0]||null;
+  const dS = nearS ? (price-nearS.p)/A : null, dR = nearR ? (nearR.p-price)/A : null;
+  let bounce = 0;
+  if(nearS && dS<.6) bounce += Math.min(1,(.6-dS)/.6)*Math.min(1,nearS.touches/3);
+  if(nearR && dR<.6) bounce -= Math.min(1,(.6-dR)/.6)*Math.min(1,nearR.touches/3);
+  let brk = 0;
+  for(const z of zones){
+    const t = Math.min(1, z.touches/2);
+    if(prev<z.p && price>z.p && (price-z.p)/A<1) brk += .7*t;
+    if(prev>z.p && price<z.p && (z.p-price)/A<1) brk -= .7*t;
+  }
+  const up3 = dR==null ? 3 : Math.min(3,dR), dn3 = dS==null ? 3 : Math.min(3,dS);
+  const room = (up3-dn3)/(up3+dn3+1e-6);
+  const sr = clamp(.55*bounce + clamp(brk,-1,1) + .35*room, -1, 1);
+  const gaps=[];
+  for(let i=2;i<n;i++){
+    if(ls[i]>hs[i-2]){ if(ls[i]-hs[i-2]>=.15*A) gaps.push({dir:1, lo:hs[i-2], hi:ls[i], i}); }
+    else if(hs[i]<ls[i-2]){ if(ls[i-2]-hs[i]>=.15*A) gaps.push({dir:-1, lo:hs[i], hi:ls[i-2], i}); }
+  }
+  gaps.forEach(g => {
+    let fill=0;
+    for(let j=g.i+1;j<n;j++) fill = Math.max(fill, clamp(g.dir>0 ? (g.hi-ls[j])/(g.hi-g.lo) : (hs[j]-g.lo)/(g.hi-g.lo), 0, 1));
+    g.fill = fill;
+  });
+  const active = gaps.filter(g=>g.fill<.98);
+  let fv=0;
+  active.forEach(g => {
+    const size=(g.hi-g.lo)/A, w8=Math.min(1,size/.8)*(1-g.fill)*Math.max(.4,1-(n-1-g.i)/25), inside = price>=g.lo && price<=g.hi;
+    if(g.dir>0){ if(inside) fv+=.8*w8; else if(price>g.hi && (price-g.hi)/A<1.5) fv+=.3*w8; }
+    else { if(inside) fv-=.8*w8; else if(price<g.lo && (g.lo-price)/A<1.5) fv-=.3*w8; }
+    if(n-1-g.i<=4) fv += g.dir*.25*w8;
+  });
+  return {zones, nearS, nearR, dS, dR, gaps:active, sr, fvg:clamp(fv,-1,1)};
 }
 function score(w){
   const WEIGHTS = weightsFor(S.volMode);
@@ -526,6 +591,7 @@ function score(w){
     if(ls[i]<ls[i-1] && ls[i]<ls[i-2] && ls[i]<ls[i+1] && ls[i]<ls[i+2]) dnF=ls[i];
   }
   const fractal = upF!=null && c0>upF ? .8 : dnF!=null && c0<dnF ? -.8 : (upF!=null && dnF!=null ? ((c0-dnF)/((upF-dnF)||1e-6)-.5)*.6 : 0);
+  const lvl = levelsInfo(w, A);
   const f={
     reg: Math.tanh(slope*(n-1)/(A*5))*(.5+.5*r2),
     struct: Math.tanh((m1-m0)/(A*2.5)),
@@ -538,7 +604,7 @@ function score(w){
     stoch, macd, cci, mom10, ao, roc:rocS, wr, dem,
     boll: Math.abs(z)>.85 ? -Math.sign(z)*Math.min(1,(Math.abs(z)-.85)/.65)*.8 : 0,
     atr:atrS, kelt, donch, env,
-    fractal,
+    fractal, sr: lvl.sr, fvg: lvl.fvg,
     candle: clamp(.5*(lw-uw)/rg + .3*body(last) + .2*body(w[n-2]), -1, 1),
     vol: clamp(1.6*pressure, -1, 1),
     obv: Math.tanh(linreg(obvArr).slope*(n-1)/(mv*4))
@@ -555,7 +621,7 @@ function score(w){
     return {key:c.key, name:c.name, keys:c.keys, value, w:ws};
   });
   const all = Object.values(f);
-  return {score:sc, f, cats, A, r2, R, rv, adx:ax.adx,
+  return {score:sc, f, cats, A, r2, R, rv, adx:ax.adx, levels:lvl,
     bull: all.filter(v=>v>.08).length, bear: all.filter(v=>v<-.08).length, total: all.length,
     agreement: agree/(agree+oppose+1e-9), strength: Math.min(1, Math.abs(sc)/.40)};
 }
@@ -675,6 +741,7 @@ function run(){
   S.result = res;
   res.pers = persistence(res);
   res.atr = atrLayer(res);
+  res.lvEff = levelsEffect();
   const live = S.skipLive ? ' (الأخيرة مستثناة لأنها لم تكتمل)' : '';
   hint('تمت قراءة ' + r.list.length + ' شمعة' + live + '.' + volNote, res.used < N || (S.volRegion && S.volMode!=='real'));
   renderResult(res); render();
@@ -751,6 +818,7 @@ function render(){
     });
     ctx.restore();
   }
+  drawLevels(u);
   drawPers(u);
   drawAtr(u);
 }
@@ -814,6 +882,7 @@ function renderResult(r){
     <h3>لون الشموع الستة القادمة</h3>
     <div class="colors">${cols}</div>
     <div class="cclab"><span>الشمعة 1 (الأقرب)</span><span>الشمعة 6</span></div>
+    ${lvHtml(r)}
     ${atrHtml(r)}
     ${persHtml(r)}
     <h3>تصويت المؤشرات (${r.total}) — اضغط على كل مجموعة للتفاصيل</h3>
@@ -882,6 +951,12 @@ function persistence(res){
   if(spike) flags.push('شمعة طفرة حديثة (مدى أكبر من 2.3× المتوسط) — قد يعود السعر');
   if(run>=5) flags.push(`${run} شموع متتالية بنفس الاتجاه — إجهاد وقد يرتد`);
   if(er<.25) flags.push(`كفاءة الحركة منخفضة (${er.toFixed(2)}) — ضوضاء أكثر من اتجاه`);
+  const L = res.levels;
+  if(L){
+    const dA = dir>0 ? L.dR : L.dS;
+    if(dA!=null && dA<1) flags.push(`${dir>0?'مقاومة':'دعم'} قريب أمام الاتجاه (${dA.toFixed(2)} ATR) قد يعيق الاستمرار`);
+    if(L.gaps.some(g => g.dir===-dir && (dir>0 ? (g.lo>res.nowP-0 && (g.lo-res.nowP)/res.A<1.2) : (g.hi<res.nowP && (res.nowP-g.hi)/res.A<1.2)))) flags.push('فجوة FVG معاكسة قريبة أمام الاتجاه');
+  }
   const penalty = S.otc ? Math.min(.30, flags.length*.07) : Math.min(.15, flags.length*.035);
   const fin = (mc,h) => { const p = n>=8 ? (h+20*mc)/(n+20) : mc; return clamp(p*(1-penalty), .05, .78); };
   const p3 = Math.round(fin(mc3,h3)*100), p4 = Math.round(fin(mc4,h4)*100);
@@ -1123,6 +1198,67 @@ function atrHtml(r){
       <p class="src" style="margin:10px 0 0">كيف يُستخدم: عند ارتفاع ATR تقوى مؤشرات الاتجاه والزخم، وعند انخفاضه تقوى مؤشرات الارتداد، ثم يُدمج ذلك مع سلوك هذا الشارت تاريخيًا في كل حالة. المستويات نسبية داخل النافذة وليست قيم ATR الحقيقية.</p>
     </div>`;
 }
+function levelsEffect(){
+  const all = S.candles, base = S.skipLive ? all.slice(0,-1) : all.slice(), W = weightsFor(S.volMode);
+  const skip = new Set(['sr','fvg']);
+  const den0 = Object.keys(W).filter(k=>!skip.has(k)).reduce((t,k)=>t+W[k],0);
+  let n=0, h1=0, h0=0;
+  for(let t=base.length-1-HZ; t>=15; t--){
+    const rr = score(base.slice(Math.max(0,t-N+1), t+1)), sc1 = rr.score;
+    const sc0 = Object.keys(rr.f).filter(k=>!skip.has(k)).reduce((a,k)=>a+W[k]*rr.f[k],0)/den0;
+    const mv = base[t+HZ].c - base[t].c;
+    if(mv===0 || Math.abs(sc1)<.03 || Math.abs(sc0)<.03) continue;
+    n++; if((sc1>0)===(mv>0)) h1++; if((sc0>0)===(mv>0)) h0++;
+  }
+  return {n, h1, h0};
+}
+function drawLevels(u){
+  const r = S.result; if(!r || !r.levels || !S.candles.length) return;
+  const L = r.levels, n = S.candles.length, off = (n-(S.skipLive?1:0)) - r.used, last = S.candles[n-1], now = last.c;
+  const xEnd = Math.min(S.W-6*u, last.x + (PH+2)*S.step);
+  const sup = L.zones.filter(z=>z.p<=now).sort((a,b)=>b.p-a.p), res = L.zones.filter(z=>z.p>now).sort((a,b)=>a.p-b.p);
+  const pick = new Set([...sup.slice(0,2), ...res.slice(0,2), ...L.zones.filter(z=>z.touches>=3)]);
+  ctx.save(); ctx.font = `700 ${10*u}px sans-serif`; ctx.textAlign = 'right';
+  L.gaps.forEach(g => {
+    const c0 = S.candles[off+g.i-2]; if(!c0) return;
+    const col = g.dir>0 ? '134,232,154' : '255,123,102', yT = -g.hi, yB = -g.lo;
+    ctx.fillStyle = `rgba(${col},.15)`; ctx.fillRect(c0.x, yT, xEnd-c0.x, yB-yT);
+    ctx.setLineDash([5*u,4*u]); ctx.lineWidth = 1.2*u; ctx.strokeStyle = `rgba(${col},.8)`; ctx.strokeRect(c0.x, yT, xEnd-c0.x, yB-yT); ctx.setLineDash([]);
+    ctx.fillStyle = `rgba(${col},1)`; ctx.fillText('FVG'+(g.dir>0?'↑':'↓'), xEnd-3*u, yT+11*u);
+  });
+  pick.forEach(z => {
+    const isS = z.p<=now, col = isS ? '#6fe3d9' : '#e69cff', y = -z.p, c0 = S.candles[Math.max(0,off+z.first)];
+    const x0 = c0 ? c0.x : 0;
+    ctx.setLineDash([8*u,5*u]); ctx.lineWidth = 1.8*u; ctx.strokeStyle = col;
+    ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(xEnd, y); ctx.stroke(); ctx.setLineDash([]);
+    const lab = (isS?'دعم':'مقاومة')+' ×'+z.touches, tw = ctx.measureText(lab).width+8*u;
+    ctx.fillStyle = 'rgba(9,26,23,.85)'; ctx.fillRect(xEnd-tw, y-(isS?-2:13)*u, tw, 12*u);
+    ctx.fillStyle = col; ctx.fillText(lab, xEnd-4*u, y+(isS?10:-3)*u);
+  });
+  ctx.restore();
+}
+function lvHtml(r){
+  const L = r.levels; if(!L) return '';
+  const A = r.A, now = r.nowP, dec = decimals();
+  const pv = p => { const v = priceAt(-p); return v!=null ? v.toFixed(dec)+' · ' : ''; };
+  const sup = L.zones.filter(z=>z.p<=now).sort((a,b)=>b.p-a.p)[0], res = L.zones.filter(z=>z.p>now).sort((a,b)=>a.p-b.p)[0];
+  const cell = (cls,t,z) => `<div class="lc ${cls}"><small>${t}</small><b class="num">${z ? pv(z.p)+(Math.abs(z.p-now)/A).toFixed(2)+' ATR' : '—'}</b>${z?`<small class="num">${z.touches} لمسة</small>`:''}</div>`;
+  const word = v => v>.08 ? 'يميل للصعود' : v<-.08 ? 'يميل للهبوط' : 'محايد';
+  const sgn = v => (v>=0?'+':'−')+Math.abs(v).toFixed(2);
+  const rel = g => now>=g.lo && now<=g.hi ? 'السعر داخلها' : now>g.hi ? 'السعر فوقها' : 'السعر تحتها';
+  const gl = L.gaps.slice(-3).reverse().map(g => `<li><span>FVG ${g.dir>0?'صاعدة ↑':'هابطة ↓'} · ${((g.hi-g.lo)/A).toFixed(2)} ATR</span><span><i>${rel(g)} · ممتلئة ${Math.round(g.fill*100)}%</i></span></li>`).join('') || '<li><span>لا فجوات FVG نشطة في النافذة</span><span></span></li>';
+  const E = r.lvEff, eff = E && E.n>=8
+    ? `قياس الأثر على هذا الشارت: بدون الدعم والمقاومة وFVG أصاب النموذج <b class="num">${E.h0}/${E.n}</b>، ومعها <b class="num">${E.h1}/${E.n}</b>${E.h1>E.h0?' (تحسّن)':E.h1<E.h0?' (تراجع)':' (لا فرق)'} — عينة صغيرة.`
+    : 'قياس الأثر: عينة صغيرة جدًا لقياس أثر الدعم والمقاومة وFVG.';
+  return `<h3>الدعم والمقاومة وFair Value Gap</h3>
+    <div class="lvbox">
+      <div class="two">${cell('r','أقرب مقاومة',res)}${cell('s','أقرب دعم',sup)}</div>
+      <ul>${gl}</ul>
+      <p class="tilt">الدعم والمقاومة: <span class="num">${sgn(r.f.sr)}</span> ${word(r.f.sr)} · FVG: <span class="num">${sgn(r.f.fvg)}</span> ${word(r.f.fvg)}</p>
+      <p class="eff">${eff}</p>
+      <p class="why">يدخلان في القرار بوزن ≈ 9% ضمن مجموعة مستقلة، ويُرسمان على الصورة (دعم بالتركواز، مقاومة بالبنفسجي، FVG مستطيلات). المسافات بوحدة ATR من السعر الحالي. هذه مفاهيم تقديرية وتحتاج حكمك، وأوزانها من عندي وغير مُدرَّبة.</p>
+    </div>`;
+}
 function hint(t, warn){ const h=$('#hint'); h.textContent=t; h.classList.toggle('warn', !!warn); }
 function toImg(e){
   const r = cv.getBoundingClientRect();
@@ -1202,7 +1338,7 @@ window.addEventListener('paste', e => {
 });
 window.addEventListener('dragover', e => e.preventDefault());
 window.addEventListener('drop', e => { if(!drop.contains(e.target)){ e.preventDefault(); if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); } });
-window.__S = S; window.__atr = atrLayer; window.__run = run; window.__score = score;
+window.__S = S; window.__levels = levelsInfo; window.__atr = atrLayer; window.__run = run; window.__score = score;
 })();
 </script>
 </body>
