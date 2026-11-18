@@ -227,7 +227,6 @@ details.cat .vote{font-size:12.5px;color:#ecd9de}
     <span class="chip">الإطار <b class="num" id="tfChip">M5</b></span>
     <span class="chip"><b class="num">30</b> شمعة · <b class="num">33</b> مؤشرًا</span>
     <span class="chip">يتوقع بعد <b class="num">6</b> شموع (<b class="num" id="hzMin">30</b> د)</span>
-    <span class="chip">حد الإشارة <b class="num">≥ 1.00 ATR</b></span>
   </div>
 </header>
 
@@ -273,7 +272,7 @@ details.cat .vote{font-size:12.5px;color:#ecd9de}
             <option value="15">M15</option>
           </select>
         </label>
-        <label class="toggle"><input type="checkbox" id="optStrong" checked> إشارات قوية فقط</label>
+        <label class="toggle"><input type="checkbox" id="optStrong"> إشارات قوية فقط (اختياري)</label>
         <label class="toggle">رسوم % للطرف <input class="numin" id="fee" type="number" step="0.01" min="0" value="0.10" inputmode="decimal"></label>
         <button class="btn" id="btnAxis" type="button">قراءة الأسعار من المحور</button>
       </div>
@@ -315,10 +314,9 @@ const S = {
   mode: null, drag: null, calib: [{y:null,p:null},{y:null,p:null}],
   result: null, boxes: true, skipLive: true
 };
-S.fear = .6; S.otc = true; S.profile = 'auto'; S.tf = 5; S.strongOnly = true; S.fee = .10; S.axis = null;
+S.fear = .6; S.otc = true; S.profile = 'auto'; S.tf = 5; S.strongOnly = false; S.fee = .10; S.axis = null;
 const STRONG = {conf:70, cats:4, rr:1.2, ev:.10};
 const PH = 4;   // أفق الاستمرارية: 3 و4 شموع
-const MIN_MOVE = 1.00;   // أقل حركة متوقعة (بوحدة ATR) لإصدار إشارة؛ أقل منها = إشارة غير معروفة
 function loadFile(file){
   if(!file || !file.type.startsWith('image/')) return;
   const url = URL.createObjectURL(file);
@@ -786,7 +784,7 @@ function run(){
   if(!res){ hint('عدد الشموع المكتملة غير كافٍ للتحليل.', true); renderResult(null); render(); return; }
   S.result = res;
   res.mvATR = Math.round(Math.abs(res.delta)/res.A*100)/100;
-  res.unknown = res.dir===0 || res.mvATR < MIN_MOVE;
+  res.unknown = res.dir===0;
   res.show = false;
   res.pers = persistence(res);
   res.atr = atrLayer(res);
@@ -883,18 +881,18 @@ function renderResult(r){
   }
   const unk = !!r.unknown || !r.show, hold = !r.unknown && !r.show;
   const dirKey = unk ? 'flat' : r.dir>0 ? 'up' : r.dir<0 ? 'down' : 'flat';
-  const word = unk ? (hold ? 'انتظر' : 'غير معروفة') : r.dir>0 ? 'شراء' : r.dir<0 ? 'بيع' : 'محايد';
+  const word = unk ? (hold ? 'انتظر' : 'محايد') : r.dir>0 ? 'شراء' : r.dir<0 ? 'بيع' : 'محايد';
   const arrow = unk ? '<path d="M9.2 9a2.9 2.9 0 1 1 4.1 2.6c-.8.4-1.3 1-1.3 1.9"/><path d="M12 17.2h.01"/>' : r.dir>0 ? '<path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/>' : r.dir<0 ? '<path d="M12 5v14M5.5 12.5 12 19l6.5-6.5"/>' : '<path d="M5 12h14"/>';
-  const adv = unk ? (hold ? `إشارة غير قوية — لم تتحقق ${r.plan.checks.filter(c=>!c.ok && !c.skip).length} من فلاتر الإشارة القوية` : `الحركة المتوقعة ${r.mvATR.toFixed(2)} ATR أقل من الحد الأدنى ${MIN_MOVE.toFixed(2)} ATR — لا تدخل`) : r.final>=60 ? `${r.dir>0?'شراء (Long)':'بيع (Short)'} — الاتجاه المتوقع خلال ${HZ} شموع (${HZ*S.tf} دقيقة)` : 'الإشارة ضعيفة، الأفضل عدم الدخول';
+  const adv = unk ? (hold ? `إشارة غير قوية — لم تتحقق ${r.plan.checks.filter(c=>!c.ok && !c.skip).length} من فلاتر الإشارة القوية` : 'لا يوجد اتجاه واضح — الدرجة الكلية قريبة من الصفر') : `${r.dir>0?'شراء (Long)':'بيع (Short)'} — الاتجاه المتوقع خلال ${HZ} شموع (${HZ*S.tf} دقيقة)${r.final<60?' — الموثوقية منخفضة':''}`;
   const circ = Math.PI*90, frac = (r.final-50)/40;   // المقياس من 50% إلى 90%
   let ticks=''; for(let i=1;i<10;i++){ const a=Math.PI*(1-i/10); const x1=100+78*Math.cos(a), y1=100-78*Math.sin(a), x2=100+98*Math.cos(a), y2=100-98*Math.sin(a); ticks+=`<line class="tick" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`; }
   const dec = decimals(), np = priceAt(-r.nowP), tp = priceAt(-(r.nowP + r.delta));
   const lo = priceAt(-(r.nowP + r.delta - r.band)), hi = priceAt(-(r.nowP + r.delta + r.band));
   const sgn = v => (v>0?'+':v<0?'−':'') + Math.abs(v/r.A).toFixed(2);
   const unkCells = `<div class="cell"><small>الحركة المتوقعة (مطلقة)</small><b class="num" style="color:var(--amber)">${r.mvATR.toFixed(2)} ATR</b></div>
-       <div class="cell"><small>الحد الأدنى للإشارة</small><b class="num">${MIN_MOVE.toFixed(2)} ATR</b></div>
-       <div class="cell wide"><small>${hold ? 'الاتجاه موجود لكن الإشارة لا تستوفي فلاتر الإشارة القوية، فلا تُعرض خطة صفقة' : 'أقل من الحد، فلا يُعرض اتجاه ولا هدف ولا ألوان شموع'}</small></div>`;
-  const unkBox = hold ? `<div class="unkbox"><b>لا توجد إشارة قوية</b><p>الاتجاه المرجّح ${r.dir>0?'شراء':'بيع'} لكنه لا يستوفي كل الشروط:</p>${chkHtml(r)}</div>` : `<div class="unkbox"><b>لا توجد إشارة</b><p>الإشارة غير معروفة لأن الحركة المتوقعة (${r.mvATR.toFixed(2)} ATR) أقل من ${MIN_MOVE.toFixed(2)} ATR.</p></div>`;
+       <div class="cell"><small>الدرجة الكلية</small><b class="num">${r.score.toFixed(3)}</b></div>
+       <div class="cell wide"><small>${hold ? 'الاتجاه موجود لكن الإشارة لا تستوفي فلاتر الإشارة القوية، فلا تُعرض خطة صفقة' : 'الدرجة الكلية قريبة من الصفر، فلا يُعرض اتجاه ولا هدف'}</small></div>`;
+  const unkBox = hold ? `<div class="unkbox"><b>لا توجد إشارة قوية</b><p>الاتجاه المرجّح ${r.dir>0?'شراء':'بيع'} لكنه لا يستوفي كل الشروط:</p>${chkHtml(r)}</div>` : `<div class="unkbox"><b>محايد</b><p>لا يوجد اتجاه واضح: المؤشرات متعادلة تقريبًا (بما فيها الحجم).</p></div>`;
   const targetCells = unk ? unkCells : (np!=null && tp!=null)
     ? `<div class="cell"><small>السعر الحالي</small><b class="num">${np.toFixed(dec)}</b></div>
        <div class="cell"><small>الهدف المتوقع</small><b class="num" style="color:var(--dir)">${tp.toFixed(dec)}</b></div>
@@ -924,7 +922,7 @@ function renderResult(r){
   <div class="res" data-dir="${dirKey}">
     <div class="head">
       <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${arrow}</svg></div>
-      <div><p class="verdict">${word}</p><span class="grade">${unk ? (hold ? 'لا توجد إشارة قوية' : 'لا توجد إشارة') : (r.plan && r.plan.strong ? 'إشارة قوية' : 'إشارة ' + r.grade)}</span></div>
+      <div><p class="verdict">${word}</p><span class="grade">${unk ? (hold ? 'لا توجد إشارة قوية' : 'لا اتجاه واضح') : (r.plan && r.plan.strong ? 'إشارة قوية' : 'إشارة ' + r.grade)}</span></div>
     </div>
     <p class="sub">${adv}</p>
     ${unk ? unkBox : `<div class="gaugebox">
@@ -1504,7 +1502,6 @@ function evalPlan(r){
   const agree = r.cats.filter(c => c.value*dir>=.06).length, oppose = r.cats.filter(c => c.value*dir<=-.06).length;
   const real = r.volMode==='real', volOk = real && dir*r.f.vol>.1 && dir*r.f.obv>0;
   P.checks = [
-    {label:'الحركة المتوقعة ≥ '+MIN_MOVE.toFixed(2)+' ATR', val:r.mvATR.toFixed(2)+' ATR', ok:r.mvATR>=MIN_MOVE},
     {label:'الموثوقية ≥ '+STRONG.conf+'%', val:r.final+'%', ok:r.final>=STRONG.conf},
     {label:'توافق المجموعات ≥ '+STRONG.cats+' من '+r.cats.length+' (وضد ≤ 1)', val:agree+' مع / '+oppose+' ضد', ok:agree>=STRONG.cats && oppose<=1},
     {label:'الحجم يؤكد الاتجاه', val:real ? (volOk?'مؤكد':'لا يؤكد') : 'غير مقروء', ok:volOk, skip:!real},
@@ -1557,7 +1554,7 @@ function planHtml(r){
       ${warn}
       <p class="why" style="margin:8px 0 0;font-size:12px;color:var(--mute)">${P.slNote}. المحاكاة من حركة هذا الشارت نفسه خلال ${HZ} شموع (${HZ*S.tf} دقيقة) وتفترض أن SL يُضرب قبل TP إذا لمس الاثنين في شمعة واحدة. هذه ليست نصيحة مالية.</p>
     </div>
-    <h3>فلاتر الإشارة القوية</h3>${chkHtml(r)}`;
+    <h3>فلاتر جودة الإشارة${S.strongOnly?'':' — للعلم فقط، لا تمنع الإشارة'}</h3>${chkHtml(r)}`;
 }
 function drawPlan(u){
   const r = S.result; if(!r || !r.show || !r.plan || !S.candles.length) return;
