@@ -237,6 +237,14 @@ details.cat .vote{font-size:12.5px;color:#cfe3da}
         <label class="toggle"><input type="checkbox" id="optBoxes" checked> إظهار قراءة الشموع</label>
         <label class="toggle"><input type="checkbox" id="optLive" checked> تجاهل الشمعة الحالية غير المكتملة</label>
         <label class="toggle"><input type="checkbox" id="optOtc" checked> سوق OTC</label>
+        <label class="toggle">وزن CCI
+          <select id="cciW" aria-label="وزن CCI في القرار">
+            <option value="0.07">عادي 7%</option>
+            <option value="0.15">متوسط 15%</option>
+            <option value="0.25" selected>عالٍ 25%</option>
+            <option value="0.35">مرتفع جدًا 35%</option>
+          </select>
+        </label>
         <label class="toggle">حد الخوف
           <select id="fear" aria-label="حد الخوف">
             <option value="0.4">صارم (0.4 ATR)</option>
@@ -281,7 +289,7 @@ const S = {
   mode: null, drag: null, calib: [{y:null,p:null},{y:null,p:null}],
   result: null, boxes: true, skipLive: true
 };
-S.fear = .6; S.otc = true;
+S.fear = .6; S.otc = true; S.cciShare = .25;
 const PH = 4;   // أفق الاستمرارية: 3 و4 شموع
 function loadFile(file){
   if(!file || !file.type.startsWith('image/')) return;
@@ -413,9 +421,11 @@ const W0 = {reg:.06,struct:.03,ema:.04,ma:.03,sma:.03,sar:.04,ichi:.04,gator:.03
   boll:.03,atr:.02,kelt:.03,donch:.03,env:.02, fractal:.03,candle:.09, sr:.05,fvg:.04};
 function weightsFor(mode){
   const volW = mode==='real' ? .20 : .06;
-  const W1 = {...W0}; if(S.cciMode==='panel') W1.cci = W0.cci*2.5;
-  const tot = Object.values(W1).reduce((a,b)=>a+b,0), k = (1-volW)/tot, w = {};
+  const share = S.cciMode==='panel' ? S.cciShare : 0;
+  const W1 = {...W0}; if(share>0) delete W1.cci;
+  const tot = Object.values(W1).reduce((a,b)=>a+b,0), k = (1-volW-share)/tot, w = {};
   for(const key in W1) w[key] = W1[key]*k;
+  if(share>0) w.cci = share;
   w.vol = volW*.4; w.obv = volW*.3; w.volx = volW*.3;
   return w;
 }
@@ -758,6 +768,7 @@ function run(){
   res.pers = persistence(res);
   res.atr = atrLayer(res);
   res.lvEff = levelsEffect();
+  res.cciEff = cciEffect();
   const live = S.skipLive ? ' (الأخيرة مستثناة لأنها لم تكتمل)' : '';
   hint('تمت قراءة ' + r.list.length + ' شمعة' + live + '.' + volNote + (S.cciInfo ? ' CCI: مقروء من اللوحة.' : ' CCI: محسوب من الشموع.'), res.used < N || (S.volRegion && S.volMode!=='real'));
   renderResult(res); render();
@@ -849,6 +860,7 @@ function renderResult(r){
   const word = r.dir>0 ? 'صعود' : r.dir<0 ? 'هبوط' : 'محايد';
   const arrow = r.dir>0 ? '<path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/>' : r.dir<0 ? '<path d="M12 5v14M5.5 12.5 12 19l6.5-6.5"/>' : '<path d="M5 12h14"/>';
   const adv = r.final>=60 ? 'السعر المتوقع بعد 6 شموع (15 دقيقة)' : 'الإشارة ضعيفة، الأفضل عدم الدخول';
+  const cciWarn = r.dir && S.cciMode==='panel' && r.dir*r.f.cci < -.35 ? ' — ⚠ CCI يعاكس الاتجاه المتوقع' : '';
   const circ = Math.PI*90, frac = (r.final-50)/40;   // المقياس من 50% إلى 90%
   let ticks=''; for(let i=1;i<10;i++){ const a=Math.PI*(1-i/10); const x1=100+78*Math.cos(a), y1=100-78*Math.sin(a), x2=100+98*Math.cos(a), y2=100-98*Math.sin(a); ticks+=`<line class="tick" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`; }
   const dec = decimals(), np = priceAt(-r.nowP), tp = priceAt(-(r.nowP + r.delta));
@@ -885,7 +897,7 @@ function renderResult(r){
       <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${arrow}</svg></div>
       <div><p class="verdict">${word}</p><span class="grade">إشارة ${r.grade}</span></div>
     </div>
-    <p class="sub">${adv}</p>
+    <p class="sub">${adv}${cciWarn}</p>
     <div class="gaugebox">
       <svg class="gauge" viewBox="0 0 200 108" aria-hidden="true">
         <path class="track" d="M10 100 A90 90 0 0 1 190 100" fill="none" stroke-width="14" stroke-linecap="round"/>
@@ -1387,8 +1399,23 @@ function cvHtml(r){
         <div class="cc2"><small>Volume ${real?'من اللوحة':'(بديل: مدى الشمعة)'}</small><b class="num">${r.rv.toFixed(2)}×</b><small>آخر 3 شموع إلى المتوسط</small>${volSvg}</div>
       </div>
       <p class="tilt">CCI <span class="num">${sg(r.f.cci)}</span> ${w3(r.f.cci)} · ضغط الحجم <span class="num">${sg(r.f.vol)}</span> · OBV <span class="num">${sg(r.f.obv)}</span> · تمدد الحجم <span class="num">${sg(r.f.volx)}</span></p>
-      <p class="src">${ev} ${confirm}. تدخل هذه القيم في القرار مع بقية المؤشرات ومع ATR (وزن CCI يتضاعف تقريبًا عند قراءته من اللوحة، والحجم الحقيقي بوزن 20%).</p>
+      <p class="src">${ev} ${confirm}. وزن CCI في القرار ${hasC ? Math.round(S.cciShare*100)+'% (من اللوحة)' : '≈ 3% (محسوب)'}، والحجم الحقيقي 20%.</p>
+      <p class="src">${r.cciEff && r.cciEff.n>=8 ? `قياس الأثر على هذا الشارت: بوزن CCI العادي (7%) أصاب النموذج <b class="num">${r.cciEff.hr}/${r.cciEff.n}</b>، وبالوزن الحالي (${Math.round(r.cciEff.share*100)}%) <b class="num">${r.cciEff.hc}/${r.cciEff.n}</b>${r.cciEff.hc>r.cciEff.hr?' (تحسّن)':r.cciEff.hc<r.cciEff.hr?' (تراجع)':' (لا فرق)'} — عينة صغيرة.` : 'قياس أثر وزن CCI: عينة صغيرة أو CCI غير مقروء من اللوحة.'}</p>
     </div>`;
+}
+function cciEffect(){
+  if(S.cciMode!=='panel') return null;
+  const all = S.candles, base = S.skipLive ? all.slice(0,-1) : all.slice(), keep = S.cciShare;
+  S.cciShare = .07; const ref = weightsFor(S.volMode); S.cciShare = keep;
+  let n=0, hc=0, hr=0;
+  for(let t=base.length-1-HZ; t>=15; t--){
+    const rr = score(base.slice(Math.max(0,t-N+1), t+1)), sc1 = rr.score; let sc0 = 0;
+    for(const k in rr.f) sc0 += ref[k]*rr.f[k];
+    const mv = base[t+HZ].c - base[t].c;
+    if(mv===0 || Math.abs(sc1)<.03 || Math.abs(sc0)<.03) continue;
+    n++; if((sc1>0)===(mv>0)) hc++; if((sc0>0)===(mv>0)) hr++;
+  }
+  return {n, hc, hr, share:keep};
 }
 function hint(t, warn){ const h=$('#hint'); h.textContent=t; h.classList.toggle('warn', !!warn); }
 function toImg(e){
@@ -1466,6 +1493,7 @@ cv.addEventListener('pointerup', () => {
   if(S.cciRegion.x1-S.cciRegion.x0<60 || S.cciRegion.y1-S.cciRegion.y0<12) S.cciRegion = null;
   $('#btnCciClear').hidden = !S.cciRegion; run();
 });
+$('#cciW').addEventListener('change', e => { S.cciShare = parseFloat(e.target.value); if(S.base) run(); });
 $('#optOtc').addEventListener('change', e => { S.otc = e.target.checked; if(S.base) run(); });
 $('#fear').addEventListener('change', e => { S.fear = parseFloat(e.target.value); if(S.base) run(); });
 $('#file').addEventListener('change', e => loadFile(e.target.files[0]));
