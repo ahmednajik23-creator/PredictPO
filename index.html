@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>قارئ الشموع — 33 مؤشرًا + دعم/مقاومة + FVG + ATR — OTC</title>
+<title>قارئ الشموع — 34 مؤشرًا + CCI + Volume + ATR — M3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel=preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@600;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -182,6 +182,14 @@ details.cat .vote{font-size:12.5px;color:#cfe3da}
 .lvbox .tilt{margin:10px 0 0;font-weight:600;font-size:14px}
 .lvbox .why{margin:10px 0 0;font-size:12px;color:var(--mute)}
 .lvbox .eff{margin:10px 0 0;font-size:12.5px;color:#cfe3da;border-top:1px solid var(--line);padding-top:8px}
+.cvbox{background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:14px}
+.cvbox .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cvbox .cc2{border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--panel)}
+.cvbox .cc2 small{display:block;color:var(--mute);font-size:12.5px}
+.cvbox .cc2 b{font-size:20px;font-weight:600}
+.cvbox svg{width:100%;height:64px;display:block;margin-top:6px}
+.cvbox .tilt{margin:10px 0 0;font-weight:600;font-size:14px}
+.cvbox .src{margin:8px 0 0;font-size:12.5px;color:var(--mute)}
 @media(prefers-reduced-motion:reduce){.gauge .val{transition:none}}
 @media(max-width:520px){.verdict{font-size:44px}.vote{grid-template-columns:104px 1fr 40px}details.cat summary{grid-template-columns:104px 1fr 40px 12px}.spec{margin-inline-start:0}}
 </style>
@@ -202,7 +210,7 @@ details.cat .vote{font-size:12.5px;color:#cfe3da}
   </div>
   <div class="spec">
     <span class="chip">الإطار <b class="num">M3</b></span>
-    <span class="chip"><b class="num">30</b> شمعة · <b class="num">33</b> مؤشرًا</span>
+    <span class="chip"><b class="num">30</b> شمعة · <b class="num">34</b> مؤشرًا</span>
     <span class="chip">يتوقع بعد <b class="num">6</b> شموع (<b class="num">15</b> د)</span>
   </div>
 </header>
@@ -224,6 +232,8 @@ details.cat .vote{font-size:12.5px;color:#cfe3da}
         <button class="btn" id="btnVolClear" type="button" hidden>إزالة الحجم</button>
         <button class="btn" id="btnAtr" type="button">تحديد لوحة ATR</button>
         <button class="btn" id="btnAtrClear" type="button" hidden>إزالة ATR</button>
+        <button class="btn" id="btnCci" type="button">تحديد لوحة CCI</button>
+        <button class="btn" id="btnCciClear" type="button" hidden>إزالة CCI</button>
         <label class="toggle"><input type="checkbox" id="optBoxes" checked> إظهار قراءة الشموع</label>
         <label class="toggle"><input type="checkbox" id="optLive" checked> تجاهل الشمعة الحالية غير المكتملة</label>
         <label class="toggle"><input type="checkbox" id="optOtc" checked> سوق OTC</label>
@@ -289,7 +299,8 @@ function loadFile(file){
     S.calib = [{y:null,p:null},{y:null,p:null}]; $('#y0').textContent = $('#y1').textContent = 'لم تُحدد';
     $('#drop').hidden = true; $('#stage').hidden = false;
     URL.revokeObjectURL(url);
-    S.region = autoRegion(); S.volRegion = null; $('#btnVolClear').hidden = true;
+    S.region = autoRegion(); S.volRegion = null; $('#btnVolClear').hidden = true; S.cciRegion = null; $('#btnCciClear').hidden = true;
+    autoPanels();
     run();
   };
   img.onerror = () => hint('تعذّر فتح الصورة، جرّب صورة بصيغة PNG أو JPG.', true);
@@ -387,7 +398,7 @@ const NAMES = {
   mom:'زخم 6 شموع', rsi:'RSI', stoch:'Stochastic', macd:'MACD', cci:'CCI', mom10:'Momentum 10', ao:'Awesome Oscillator',
   roc:'Rate of Change', wr:'Williams %R', dem:'DeMarker',
   boll:'Bollinger Bands', atr:'ATR (توسع التذبذب)', kelt:'Keltner Channel', donch:'Donchian Channel', env:'Envelopes',
-  fractal:'Fractal', sr:'الدعم والمقاومة', fvg:'Fair Value Gap', candle:'الشموع الأخيرة', vol:'Volume (ضغط الحجم)', obv:'OBV'
+  fractal:'Fractal', sr:'الدعم والمقاومة', fvg:'Fair Value Gap', candle:'الشموع الأخيرة', vol:'Volume (ضغط الحجم)', obv:'OBV', volx:'Volume (تمدد مع الاتجاه)'
 };
 const CATS = [
   {key:'trend', name:'الاتجاه', keys:['reg','struct','ema','ma','sma','sar','ichi','gator','st','adx','aroon','vortex']},
@@ -395,16 +406,17 @@ const CATS = [
   {key:'volat', name:'التذبذب والقنوات', keys:['boll','atr','kelt','donch','env']},
   {key:'price', name:'حركة السعر', keys:['fractal','candle']},
   {key:'levels', name:'الدعم والمقاومة وFVG', keys:['sr','fvg']},
-  {key:'volume', name:'الحجم', keys:['vol','obv']}
+  {key:'volume', name:'الحجم', keys:['vol','obv','volx']}
 ];
 const W0 = {reg:.06,struct:.03,ema:.04,ma:.03,sma:.03,sar:.04,ichi:.04,gator:.03,st:.04,adx:.04,aroon:.03,vortex:.03,
   mom:.03,rsi:.04,stoch:.03,macd:.04,cci:.03,mom10:.02,ao:.03,roc:.02,wr:.03,dem:.03,
   boll:.03,atr:.02,kelt:.03,donch:.03,env:.02, fractal:.03,candle:.09, sr:.05,fvg:.04};
 function weightsFor(mode){
   const volW = mode==='real' ? .20 : .06;
-  const tot = Object.values(W0).reduce((a,b)=>a+b,0), k = (1-volW)/tot, w = {};
-  for(const key in W0) w[key] = W0[key]*k;
-  w.vol = volW*.6; w.obv = volW*.4;
+  const W1 = {...W0}; if(S.cciMode==='panel') W1.cci = W0.cci*2.5;
+  const tot = Object.values(W1).reduce((a,b)=>a+b,0), k = (1-volW)/tot, w = {};
+  for(const key in W1) w[key] = W1[key]*k;
+  w.vol = volW*.4; w.obv = volW*.3; w.volx = volW*.3;
   return w;
 }
 const trOf = (c,pc) => Math.max(c.h-c.l, Math.abs(c.h-pc), Math.abs(c.l-pc));
@@ -534,6 +546,7 @@ function score(w){
   const pressure = den ? num/den : 0;
   const obvArr=[0]; for(let i=1;i<n;i++) obvArr.push(obvArr[i-1] + Math.sign(cl[i]-cl[i-1])*vs[i]);
   const rv = mean(vs.slice(-3))/mv;
+  const volx = Math.tanh((rv-1)*1.5)*Math.tanh((cl[n-1]-cl[n-1-Math.min(3,n-1)])/(A*1.2));
   const wma = wmaLast(cl,10), wmaPrev = wmaLast(cl.slice(0,-3),10);
   const sma10 = mean(cl.slice(-10)), sma30 = mean(cl.slice(-Math.min(30,n)));
   const sr = psar(w), sar = (sr.up?1:-1)*(sr.bars<=1 ? 1 : .7);
@@ -565,7 +578,8 @@ function score(w){
   const macd = .6*Math.tanh(hist/(A*.4)) + .4*Math.tanh(macdV/(A*1.2));
   const cp=Math.min(20,n), tp=w.slice(-cp).map(c=>(c.h+c.l+c.c)/3), tpm=mean(tp), md=mean(tp.map(v=>Math.abs(v-tpm)))||1e-6;
   const cciV=(tp[cp-1]-tpm)/(.015*md);
-  const cci = Math.abs(cciV)>200 ? -Math.sign(cciV)*.5 : clamp(cciV/150,-1,1)*.7;
+  const cciP = w.every(c=>Number.isFinite(c.cciv)) ? w.map(c=>c.cciv) : null;
+  const cci = cciP ? cciSig(cciP) : (Math.abs(cciV)>200 ? -Math.sign(cciV)*.5 : clamp(cciV/150,-1,1)*.7);
   const k10=Math.min(10,n-1), mom10=Math.tanh((cl[n-1]-cl[n-1-k10])/(A*3));
   const aoAt=i=>{ const e=i+1; return mean(med.slice(Math.max(0,e-5),e)) - mean(med.slice(Math.max(0,e-Math.min(34,e)),e)); };
   const aoV=aoAt(n-1), aoPrev=aoAt(n-3);
@@ -607,7 +621,8 @@ function score(w){
     fractal, sr: lvl.sr, fvg: lvl.fvg,
     candle: clamp(.5*(lw-uw)/rg + .3*body(last) + .2*body(w[n-2]), -1, 1),
     vol: clamp(1.6*pressure, -1, 1),
-    obv: Math.tanh(linreg(obvArr).slope*(n-1)/(mv*4))
+    obv: Math.tanh(linreg(obvArr).slope*(n-1)/(mv*4)),
+    volx
   };
   for(const key in f) if(!isFinite(f[key])) f[key]=0;
   f.reg = clamp(f.reg,-1,1);
@@ -725,6 +740,7 @@ function run(){
   S.candles = r.list; S.bw = r.bw; S.step = r.step;
   S.result = null;
   readAtr();
+  readCci();
   if(r.list.length < 16){
     hint('قرأتُ ' + r.list.length + ' شمعة فقط. حدّد منطقة الشارت يدويًا (الزر بالأعلى) بحيث تحتوي الشموع فقط.', true);
     renderResult(null); render(); return;
@@ -743,7 +759,7 @@ function run(){
   res.atr = atrLayer(res);
   res.lvEff = levelsEffect();
   const live = S.skipLive ? ' (الأخيرة مستثناة لأنها لم تكتمل)' : '';
-  hint('تمت قراءة ' + r.list.length + ' شمعة' + live + '.' + volNote, res.used < N || (S.volRegion && S.volMode!=='real'));
+  hint('تمت قراءة ' + r.list.length + ' شمعة' + live + '.' + volNote + (S.cciInfo ? ' CCI: مقروء من اللوحة.' : ' CCI: محسوب من الشموع.'), res.used < N || (S.volRegion && S.volMode!=='real'));
   renderResult(res); render();
 }
 function priceAt(py){
@@ -821,6 +837,7 @@ function render(){
   drawLevels(u);
   drawPers(u);
   drawAtr(u);
+  drawCci(u);
 }
 function renderResult(r){
   const box = $('#result');
@@ -882,6 +899,7 @@ function renderResult(r){
     <h3>لون الشموع الستة القادمة</h3>
     <div class="colors">${cols}</div>
     <div class="cclab"><span>الشمعة 1 (الأقرب)</span><span>الشمعة 6</span></div>
+    ${cvHtml(r)}
     ${lvHtml(r)}
     ${atrHtml(r)}
     ${persHtml(r)}
@@ -895,6 +913,7 @@ function renderResult(r){
       <div><span>RSI</span><b class="num">${r.R.toFixed(0)}</b></div>
       <div><span>مصدر الحجم</span><b>${r.volMode==='real' ? 'حقيقي من اللقطة' : 'بديل (مدى الشمعة)'}</b></div>
       <div><span>الحجم النسبي (آخر 3)</span><b class="num">${r.rv.toFixed(2)}×</b></div>
+      <div><span>مصدر CCI</span><b>${S.cciInfo ? 'من اللوحة' : 'محسوب من الشموع'}</b></div>
       <div><span>مؤشرات صاعدة / هابطة</span><b class="num">${r.bull} / ${r.bear}</b></div>
       <div><span>قوة الاتجاه ADX</span><b class="num">${r.adx.toFixed(0)}</b></div>
       <div><span>دقة الألوان تاريخيًا</span><b class="num">${colorAcc}</b></div>
@@ -1259,6 +1278,118 @@ function lvHtml(r){
       <p class="why">يدخلان في القرار بوزن ≈ 9% ضمن مجموعة مستقلة، ويُرسمان على الصورة (دعم بالتركواز، مقاومة بالبنفسجي، FVG مستطيلات). المسافات بوحدة ATR من السعر الحالي. هذه مفاهيم تقديرية وتحتاج حكمك، وأوزانها من عندي وغير مُدرَّبة.</p>
     </div>`;
 }
+function autoPanels(){
+  const {W,H} = S, m = mask(70), r = S.region; let last = r.y1;
+  for(let y=r.y1+1; y<H*.93; y++){
+    let run=0, best=0;
+    for(let x=0;x<W;x++){ if(m[y*W+x]){ if(++run>best) best=run; } else run=0; }
+    if(best>W*.14) last=y; else if(y-last>40) break;
+  }
+  S.panelTop = last+12;
+  const vp = detectVolPanel(S.panelTop);
+  if(vp){ S.volRegion = vp; $('#btnVolClear').hidden = false; }
+}
+function detectVolPanel(yA){
+  const {W,H,data} = S, yB = Math.floor(H*.90), xB = Math.floor(W*.86);
+  const isBar = i => { const r=data[i], g=data[i+1], b=data[i+2]; return (g>r+30 && g>b+80 && g>120 && r>70) || (r>150 && g<90 && b<90); };
+  const bot = {}; let tot = 0;
+  for(let x=0;x<xB;x++){ let lo=-1; for(let y=yB-1;y>=yA;y--){ if(isBar((y*W+x)*4)){ lo=y; break; } } if(lo>=0){ bot[lo]=(bot[lo]||0)+1; tot++; } }
+  if(tot<60) return null;
+  let mode=-1, mc=-1;
+  for(const k in bot){ let c=0; for(let d=-2;d<=2;d++) c+=bot[+k+d]||0; if(c>mc){ mc=c; mode=+k; } }
+  if(mc<.5*tot) return null;
+  let top = mode;
+  for(let y=yA;y<=mode;y++){ let hit=false; for(let x=0;x<xB;x++) if(isBar((y*W+x)*4)){ hit=true; break; } if(hit){ top=y; break; } }
+  if(mode-top<25) return null;
+  return {x0:0, y0:top-6, x1:xB, y1:mode+1};
+}
+function cciSig(v){
+  const n=v.length, x=v[n-1], p=v[n-2], q=v[Math.max(0,n-4)];
+  let s = clamp(x/150,-1,1)*.35 + clamp((x-q)/120,-1,1)*.25;
+  if(x>100) s += .25*Math.min(1,(x-100)/100);
+  if(x<-100) s -= .25*Math.min(1,(-100-x)/100);
+  if(p>100 && x<=100) s -= .5;
+  if(p<-100 && x>=-100) s += .5;
+  if(Math.abs(x)>250) s -= Math.sign(x)*.3;
+  return clamp(s,-1,1);
+}
+function readCci(){
+  if(S.cciBase!==S.base){ S.cciBase = S.base; S.cciRegion = null; $('#btnCciClear').hidden = true; }
+  S.cciInfo = null; S.cciMode = 'calc'; const L = S.candles;
+  L.forEach(c => { delete c.cciv; delete c.ccy; });
+  if(L.length<16) return;
+  const {W,H,data} = S, xB = Math.floor(W*.86), reg = S.cciRegion;
+  const yA = reg ? Math.floor(reg.y0) : (S.panelTop!=null ? S.panelTop : Math.floor((S.region ? S.region.y1 : H*.7)+10));
+  const yB = reg ? Math.ceil(reg.y1) : Math.floor(H*.93);
+  const bright = (x,y) => { const i=(y*W+x)*4, r=data[i], g=data[i+1], b=data[i+2]; return r>180 && g>150 && b<110 && r-b>90; };
+  const olive = (x,y) => { const i=(y*W+x)*4, r=data[i], g=data[i+1], b=data[i+2]; return r>110 && g>95 && b<90 && r-b>50 && Math.abs(r-g)<60; };
+  const rows = [];
+  for(let y=yA;y<yB;y++){ let c=0; for(let x=0;x<xB;x+=2) if(olive(x,y)) c++; if(c>=.8*(xB/2)) rows.push(y); }
+  const lv = []; let grp = [];
+  for(const y of rows){ if(grp.length && y-grp[grp.length-1]>2){ lv.push(mean(grp)); grp=[]; } grp.push(y); }
+  if(grp.length) lv.push(mean(grp));
+  if(lv.length<2) return;
+  const yU = lv[0], yL = lv[1], ppu = (yL-yU)/200;
+  if(yL-yU<20) return;
+  const wy0 = Math.max(yA, Math.floor(yU-330*ppu)), wy1 = Math.min(yB, Math.ceil(yL+230*ppu));
+  let found = 0, mn = 1e9, mx = -1;
+  const ys = L.map(c => {
+    const xs = Math.round(c.x), arr = [];
+    for(let x=xs-1;x<=xs+1;x++) for(let y=wy0;y<wy1;y++) if(bright(x,y)) arr.push(y);
+    if(!arr.length) return null; arr.sort((a,b)=>a-b); found++; return arr[arr.length>>1];
+  });
+  if(found < .6*L.length) return;
+  for(let i=0;i<ys.length;i++) if(ys[i]==null){
+    let a=i-1; while(a>=0 && ys[a]==null) a--; let b=i+1; while(b<ys.length && ys[b]==null) b++;
+    ys[i] = a>=0 && b<ys.length ? ys[a]+(ys[b]-ys[a])*(i-a)/(b-a) : a>=0 ? ys[a] : ys[b];
+  }
+  L.forEach((c,i) => { c.ccy = ys[i]; c.cciv = 100 - 200*(ys[i]-yU)/(yL-yU); mn = Math.min(mn, ys[i]); mx = Math.max(mx, ys[i]); });
+  S.cciMode = 'panel';
+  S.cciInfo = {found, total:L.length, yU, yL, panel:{x0:0, y0:Math.min(mn,yU)-8, x1:xB, y1:Math.max(mx,yL)+8}};
+}
+function drawCci(u){
+  const I = S.cciInfo; if(!I && !S.cciRegion) return;
+  ctx.save();
+  const pn = S.cciRegion || (I && I.panel);
+  if(pn){ ctx.setLineDash([9*u,6*u]); ctx.lineWidth = 1.5*u; ctx.strokeStyle = 'rgba(244,193,93,.8)'; ctx.strokeRect(pn.x0, pn.y0, pn.x1-pn.x0, pn.y1-pn.y0); ctx.setLineDash([]); }
+  if(I && S.boxes) S.candles.forEach((c,i) => {
+    if(c.ccy==null) return;
+    ctx.beginPath(); ctx.arc(c.x, c.ccy, 3.5*u, 0, 7); ctx.fillStyle = (S.skipLive && i===S.candles.length-1) ? '#f4c15d' : '#fff3c4'; ctx.fill();
+    ctx.lineWidth = 1.2*u; ctx.strokeStyle = '#06120f'; ctx.stroke();
+  });
+  ctx.restore();
+}
+function cvHtml(r){
+  const all = S.candles, base = S.skipLive ? all.slice(0,-1) : all, win = base.slice(-N);
+  const cc = win.map(c=>c.cciv), hasC = cc.length>3 && cc.every(Number.isFinite), real = r.volMode==='real';
+  const now = hasC ? cc[cc.length-1] : null, prev = hasC ? cc[cc.length-2] : null;
+  const zone = v => v>100 ? 'فوق +100 (زخم صاعد قوي)' : v<-100 ? 'تحت −100 (زخم هابط قوي)' : 'داخل النطاق ±100';
+  const ev = !hasC ? 'لم تُقرأ لوحة CCI من اللقطة، فاستُخدم CCI محسوب من الشموع.'
+    : prev>100 && now<=100 ? 'CCI خرج من منطقة التشبع الشرائي (إشارة هبوط).'
+    : prev<-100 && now>=-100 ? 'CCI خرج من منطقة التشبع البيعي (إشارة صعود).'
+    : 'لا تقاطع لمستويات ±100 في آخر شمعة.';
+  const W=300, H=64;
+  let cciSvg = '';
+  if(hasC){
+    const st = W/(cc.length-1), yv = v => 32 - clamp(v,-250,250)/250*28;
+    cciSvg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="${yv(100).toFixed(1)}" width="${W}" height="${(yv(-100)-yv(100)).toFixed(1)}" fill="rgba(244,193,93,.08)"/><line x1="0" x2="${W}" y1="${yv(100).toFixed(1)}" y2="${yv(100).toFixed(1)}" stroke="#4f7f73" stroke-dasharray="4 4"/><line x1="0" x2="${W}" y1="${yv(-100).toFixed(1)}" y2="${yv(-100).toFixed(1)}" stroke="#4f7f73" stroke-dasharray="4 4"/><polyline fill="none" stroke="#f4c15d" stroke-width="2" points="${cc.map((v,i)=>`${(i*st).toFixed(1)},${yv(v).toFixed(1)}`).join(' ')}"/></svg>`;
+  }
+  const vs = win.map(c=>c.v||0), vmax = Math.max(...vs, 1e-9), bw = W/vs.length;
+  const ma = vs.map((_,i)=>mean(vs.slice(Math.max(0,i-9), i+1)));
+  const volSvg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${vs.map((v,i)=>`<rect x="${(i*bw+bw*.12).toFixed(1)}" y="${(H-2-v/vmax*(H-8)).toFixed(1)}" width="${(bw*.76).toFixed(1)}" height="${Math.max(1,v/vmax*(H-8)).toFixed(1)}" fill="${win[i].c>=win[i].o?'#86e89a':'#ff7b66'}" opacity=".85"/>`).join('')}<polyline fill="none" stroke="#f4c15d" stroke-width="1.6" points="${ma.map((v,i)=>`${(i*bw+bw/2).toFixed(1)},${(H-2-v/vmax*(H-8)).toFixed(1)}`).join(' ')}"/></svg>`;
+  const w3 = v => v>.08 ? 'يميل للصعود' : v<-.08 ? 'يميل للهبوط' : 'محايد';
+  const sg = v => (v>=0?'+':'−')+Math.abs(v).toFixed(2);
+  const confirm = r.dir ? (r.dir*r.f.vol>.1 ? 'الحجم يؤكد الاتجاه المتوقع' : r.dir*r.f.vol<-.1 ? 'الحجم يعاكس الاتجاه المتوقع' : 'الحجم محايد') : '';
+  return `<h3>CCI و Volume في التنبؤ (الـ ${HZ} شموع القادمة = 15 دقيقة)</h3>
+    <div class="cvbox">
+      <div class="two">
+        <div class="cc2"><small>CCI ${hasC?'(20) من اللوحة':'(محسوب)'}</small><b class="num">${now!=null ? now.toFixed(0) : '—'}</b><small>${now!=null ? zone(now) : w3(r.f.cci)}</small>${cciSvg}</div>
+        <div class="cc2"><small>Volume ${real?'من اللوحة':'(بديل: مدى الشمعة)'}</small><b class="num">${r.rv.toFixed(2)}×</b><small>آخر 3 شموع إلى المتوسط</small>${volSvg}</div>
+      </div>
+      <p class="tilt">CCI <span class="num">${sg(r.f.cci)}</span> ${w3(r.f.cci)} · ضغط الحجم <span class="num">${sg(r.f.vol)}</span> · OBV <span class="num">${sg(r.f.obv)}</span> · تمدد الحجم <span class="num">${sg(r.f.volx)}</span></p>
+      <p class="src">${ev} ${confirm}. تدخل هذه القيم في القرار مع بقية المؤشرات ومع ATR (وزن CCI يتضاعف تقريبًا عند قراءته من اللوحة، والحجم الحقيقي بوزن 20%).</p>
+    </div>`;
+}
 function hint(t, warn){ const h=$('#hint'); h.textContent=t; h.classList.toggle('warn', !!warn); }
 function toImg(e){
   const r = cv.getBoundingClientRect();
@@ -1324,6 +1455,17 @@ cv.addEventListener('pointerup', () => {
   if(S.atrRegion.x1-S.atrRegion.x0<60 || S.atrRegion.y1-S.atrRegion.y0<12) S.atrRegion = null;
   $('#btnAtrClear').hidden = !S.atrRegion; run();
 });
+$('#btnCci').addEventListener('click', () => { setMode(S.mode==='cci' ? null : 'cci'); if(S.mode==='cci') hint('اسحب على لوحة CCI أسفل الشارت (الخط الذهبي مع خطي ±100).'); });
+$('#btnCciClear').addEventListener('click', () => { S.cciRegion = null; $('#btnCciClear').hidden = true; if(S.base) run(); });
+cv.addEventListener('pointerdown', e => { if(S.mode!=='cci') return; const p = toImg(e); S.cciDrag = p; S.cciRegion = {x0:p.x,y0:p.y,x1:p.x,y1:p.y}; cv.setPointerCapture(e.pointerId); render(); });
+cv.addEventListener('pointermove', e => { if(!S.cciDrag) return; const p = toImg(e); S.cciRegion = {x0:S.cciDrag.x,y0:S.cciDrag.y,x1:p.x,y1:p.y}; render(); });
+cv.addEventListener('pointerup', () => {
+  if(!S.cciDrag) return; const r = S.cciRegion;
+  S.cciRegion = {x0:Math.max(0,Math.min(r.x0,r.x1)), y0:Math.max(0,Math.min(r.y0,r.y1)), x1:Math.min(S.W-1,Math.max(r.x0,r.x1)), y1:Math.min(S.H-1,Math.max(r.y0,r.y1))};
+  S.cciDrag = null; setMode(null);
+  if(S.cciRegion.x1-S.cciRegion.x0<60 || S.cciRegion.y1-S.cciRegion.y0<12) S.cciRegion = null;
+  $('#btnCciClear').hidden = !S.cciRegion; run();
+});
 $('#optOtc').addEventListener('change', e => { S.otc = e.target.checked; if(S.base) run(); });
 $('#fear').addEventListener('change', e => { S.fear = parseFloat(e.target.value); if(S.base) run(); });
 $('#file').addEventListener('change', e => loadFile(e.target.files[0]));
@@ -1338,7 +1480,7 @@ window.addEventListener('paste', e => {
 });
 window.addEventListener('dragover', e => e.preventDefault());
 window.addEventListener('drop', e => { if(!drop.contains(e.target)){ e.preventDefault(); if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); } });
-window.__S = S; window.__levels = levelsInfo; window.__atr = atrLayer; window.__run = run; window.__score = score;
+window.__S = S; window.__cci = readCci; window.__levels = levelsInfo; window.__atr = atrLayer; window.__run = run; window.__score = score;
 })();
 </script>
 </body>
