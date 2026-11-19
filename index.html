@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>قارئ الشموع — 34 مؤشرًا + CCI + Volume + ATR — M3</title>
+<title>قارئ الشموع — 34 مؤشرًا + RSI + CCI + Volume + ATR — M3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@600;700&display=swap" rel="stylesheet">
@@ -190,6 +190,12 @@ details.cat .vote{font-size:12.5px;color:#cfe3da}
 .cvbox svg{width:100%;height:64px;display:block;margin-top:6px}
 .cvbox .tilt{margin:10px 0 0;font-weight:600;font-size:14px}
 .cvbox .src{margin:8px 0 0;font-size:12.5px;color:var(--mute)}
+.chk{list-style:none;margin:10px 0 0;padding:0;font-size:13px}
+.chk li{display:flex;gap:8px;align-items:baseline;padding:3px 0;border-bottom:1px solid #1f4a41}
+.chk li i{font-style:normal;width:16px;flex:none}
+.chk li.ok i{color:var(--up)}.chk li.no i{color:var(--down)}.chk li.skip i{color:var(--mute)}
+.chk li span{flex:1}.chk li b{font-weight:600;color:var(--mute)}
+.strongbox{margin:10px 0 0;font-weight:700;font-size:14px}
 @media(prefers-reduced-motion:reduce){.gauge .val{transition:none}}
 @media(max-width:520px){.verdict{font-size:44px}.vote{grid-template-columns:104px 1fr 40px}details.cat summary{grid-template-columns:104px 1fr 40px 12px}.spec{margin-inline-start:0}}
 </style>
@@ -252,6 +258,13 @@ details.cat .vote{font-size:12.5px;color:#cfe3da}
             <option value="0.9">متساهل (0.9 ATR)</option>
           </select>
         </label>
+        <label class="toggle">وزن RSI
+          <select id="rsiW" aria-label="وزن RSI في القرار">
+            <option value="0.04">عادي 4%</option>
+            <option value="0.12" selected>عالٍ 12%</option>
+            <option value="0.2">مرتفع 20%</option>
+          </select>
+        </label>
       </div>
       <div class="canvas-wrap"><canvas id="cv"></canvas></div>
       <div class="hint" id="hint" role="status"></div>
@@ -289,7 +302,7 @@ const S = {
   mode: null, drag: null, calib: [{y:null,p:null},{y:null,p:null}],
   result: null, boxes: true, skipLive: true
 };
-S.fear = .6; S.otc = true; S.cciShare = .25;
+S.fear = .6; S.otc = true; S.cciShare = .25; S.rsiShare = .12;
 const PH = 4;   // أفق الاستمرارية: 3 و4 شموع
 function loadFile(file){
   if(!file || !file.type.startsWith('image/')) return;
@@ -421,11 +434,12 @@ const W0 = {reg:.06,struct:.03,ema:.04,ma:.03,sma:.03,sar:.04,ichi:.04,gator:.03
   boll:.03,atr:.02,kelt:.03,donch:.03,env:.02, fractal:.03,candle:.09, sr:.05,fvg:.04};
 function weightsFor(mode){
   const volW = mode==='real' ? .20 : .06;
-  const share = S.cciMode==='panel' ? S.cciShare : 0;
-  const W1 = {...W0}; if(share>0) delete W1.cci;
-  const tot = Object.values(W1).reduce((a,b)=>a+b,0), k = (1-volW-share)/tot, w = {};
+  const share = S.cciMode==='panel' ? S.cciShare : 0, shareR = S.rsiMode==='panel' ? S.rsiShare : 0;
+  const W1 = {...W0}; if(share>0) delete W1.cci; if(shareR>0) delete W1.rsi;
+  const tot = Object.values(W1).reduce((a,b)=>a+b,0), k = (1-volW-share-shareR)/tot, w = {};
   for(const key in W1) w[key] = W1[key]*k;
   if(share>0) w.cci = share;
+  if(shareR>0) w.rsi = shareR;
   w.vol = volW*.4; w.obv = volW*.3; w.volx = volW*.3;
   return w;
 }
@@ -546,7 +560,8 @@ function score(w){
   const e8=ema(cl,8)[n-1], e21=ema(cl,21)[n-1];
   const k=Math.min(6,n-1);
   const m1=mean(cl.slice(-10)), m0=mean(cl.slice(-20,-10));
-  const R=rsi(cl,Math.min(14,n-1));
+  const rsiP = w.every(c=>Number.isFinite(c.rsiv)) ? w.map(c=>c.rsiv) : null;
+  const R = rsiP ? rsiP[n-1] : rsi(cl,Math.min(14,n-1));
   const bb=cl.slice(-Math.min(20,n)), sma20=mean(bb), sd=Math.sqrt(mean(bb.map(v=>(v-sma20)**2)))||1e-6;
   const z=(c0-sma20)/(2*sd);
   const rg=(last.h-last.l)||1e-6, lw=Math.min(last.o,last.c)-last.l, uw=last.h-Math.max(last.o,last.c);
@@ -624,7 +639,7 @@ function score(w){
     sma: Math.tanh((sma10-sma30)/(A*1.2)),
     sar, ichi, gator, st, adx, aroon, vortex,
     mom: Math.tanh((cl[n-1]-cl[n-1-k])/(A*2.5)),
-    rsi: R<30 ? (30-R)/30 : R>70 ? -(R-70)/30 : (R-50)/120,
+    rsi: rsiP ? rsiSig(rsiP) : (R<30 ? (30-R)/30 : R>70 ? -(R-70)/30 : (R-50)/120),
     stoch, macd, cci, mom10, ao, roc:rocS, wr, dem,
     boll: Math.abs(z)>.85 ? -Math.sign(z)*Math.min(1,(Math.abs(z)-.85)/.65)*.8 : 0,
     atr:atrS, kelt, donch, env,
@@ -751,6 +766,7 @@ function run(){
   S.result = null;
   readAtr();
   readCci();
+  readRsi();
   if(r.list.length < 16){
     hint('قرأتُ ' + r.list.length + ' شمعة فقط. حدّد منطقة الشارت يدويًا (الزر بالأعلى) بحيث تحتوي الشموع فقط.', true);
     renderResult(null); render(); return;
@@ -769,8 +785,9 @@ function run(){
   res.atr = atrLayer(res);
   res.lvEff = levelsEffect();
   res.cciEff = cciEffect();
+  res.strong = strongCheck(res);
   const live = S.skipLive ? ' (الأخيرة مستثناة لأنها لم تكتمل)' : '';
-  hint('تمت قراءة ' + r.list.length + ' شمعة' + live + '.' + volNote + (S.cciInfo ? ' CCI: مقروء من اللوحة.' : ' CCI: محسوب من الشموع.'), res.used < N || (S.volRegion && S.volMode!=='real'));
+  hint('تمت قراءة ' + r.list.length + ' شمعة' + live + '.' + volNote + (S.cciInfo ? ' CCI: مقروء من اللوحة.' : ' CCI: محسوب من الشموع.') + (S.rsiInfo ? ' RSI: مقروء من اللوحة.' : ' RSI: محسوب من الشموع.'), res.used < N || (S.volRegion && S.volMode!=='real'));
   renderResult(res); render();
 }
 function priceAt(py){
@@ -849,6 +866,7 @@ function render(){
   drawPers(u);
   drawAtr(u);
   drawCci(u);
+  drawRsi(u);
 }
 function renderResult(r){
   const box = $('#result');
@@ -857,7 +875,7 @@ function renderResult(r){
     return;
   }
   const dirKey = r.dir>0 ? 'up' : r.dir<0 ? 'down' : 'flat';
-  const word = r.dir>0 ? 'صعود' : r.dir<0 ? 'هبوط' : 'محايد';
+  const word = r.dir>0 ? 'شراء' : r.dir<0 ? 'بيع' : 'محايد';
   const arrow = r.dir>0 ? '<path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/>' : r.dir<0 ? '<path d="M12 5v14M5.5 12.5 12 19l6.5-6.5"/>' : '<path d="M5 12h14"/>';
   const adv = r.final>=60 ? 'السعر المتوقع بعد 6 شموع (15 دقيقة)' : 'الإشارة ضعيفة، الأفضل عدم الدخول';
   const cciWarn = r.dir && S.cciMode==='panel' && r.dir*r.f.cci < -.35 ? ' — ⚠ CCI يعاكس الاتجاه المتوقع' : '';
@@ -895,7 +913,7 @@ function renderResult(r){
   <div class="res" data-dir="${dirKey}">
     <div class="head">
       <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${arrow}</svg></div>
-      <div><p class="verdict">${word}</p><span class="grade">إشارة ${r.grade}</span></div>
+      <div><p class="verdict">${word}</p><span class="grade">${r.strong && r.strong.strong ? (r.dir>0 ? 'شراء قوي ✔' : 'بيع قوي ✔') : 'إشارة ' + r.grade}</span></div>
     </div>
     <p class="sub">${adv}${cciWarn}</p>
     <div class="gaugebox">
@@ -911,6 +929,7 @@ function renderResult(r){
     <h3>لون الشموع الستة القادمة</h3>
     <div class="colors">${cols}</div>
     <div class="cclab"><span>الشمعة 1 (الأقرب)</span><span>الشمعة 6</span></div>
+    ${rsHtml(r)}
     ${cvHtml(r)}
     ${lvHtml(r)}
     ${atrHtml(r)}
@@ -926,6 +945,7 @@ function renderResult(r){
       <div><span>مصدر الحجم</span><b>${r.volMode==='real' ? 'حقيقي من اللقطة' : 'بديل (مدى الشمعة)'}</b></div>
       <div><span>الحجم النسبي (آخر 3)</span><b class="num">${r.rv.toFixed(2)}×</b></div>
       <div><span>مصدر CCI</span><b>${S.cciInfo ? 'من اللوحة' : 'محسوب من الشموع'}</b></div>
+      <div><span>مصدر RSI</span><b>${S.rsiInfo ? 'من اللوحة' : 'محسوب من الشموع'}</b></div>
       <div><span>مؤشرات صاعدة / هابطة</span><b class="num">${r.bull} / ${r.bear}</b></div>
       <div><span>قوة الاتجاه ADX</span><b class="num">${r.adx.toFixed(0)}</b></div>
       <div><span>دقة الألوان تاريخيًا</span><b class="num">${colorAcc}</b></div>
@@ -1417,6 +1437,107 @@ function cciEffect(){
   }
   return {n, hc, hr, share:keep};
 }
+function rsiSig(v){
+  const n=v.length, x=v[n-1], p=v[n-2], q=v[Math.max(0,n-4)];
+  let s = clamp((x-50)/25,-1,1)*.35 + clamp((x-q)/12,-1,1)*.30;
+  if(p<30 && x>=30) s += .5;
+  if(p>70 && x<=70) s -= .5;
+  if(x>80) s -= .25*Math.min(1,(x-80)/10);
+  if(x<20) s += .25*Math.min(1,(20-x)/10);
+  return clamp(s,-1,1);
+}
+function rsiConfirms(dir, v){
+  const n=v.length, x=v[n-1], p=v[n-2], q=v[Math.max(0,n-4)], rising=x-q>1, falling=q-x>1;
+  if(dir>0) return (x>=45 && x<=72 && !falling) || (p<30 && x>=30) || (x<38 && rising);
+  return (x<=55 && x>=28 && !rising) || (p>70 && x<=70) || (x>62 && falling);
+}
+function readRsi(){
+  S.rsiInfo = null; S.rsiMode = 'calc'; const L = S.candles;
+  L.forEach(c => { delete c.rsiv; delete c.rsiy; });
+  if(L.length<16) return;
+  const {W,H,data} = S, xB = Math.floor(W*.86), yB = Math.floor(H*.90);
+  const yA = S.cciInfo ? Math.floor(S.cciInfo.yL+28) : (S.panelTop!=null ? S.panelTop : Math.floor((S.region ? S.region.y1 : H*.7)+10));
+  if(yB-yA<60) return;
+  const sum = (x,y) => { const i=(y*W+x)*4; return data[i]+data[i+1]+data[i+2]; };
+  const samp = []; for(let y=yA;y<yB;y+=8) samp.push(sum(Math.floor(W*.45),y));
+  samp.sort((a,b)=>a-b); const bgS = samp[samp.length>>1];
+  const rows = [];
+  for(let y=yA;y<yB;y++){
+    let c=0;
+    for(let x=0;x<xB;x+=2){ const i=(y*W+x)*4, r=data[i], g=data[i+1], b=data[i+2]; if(r+g+b>bgS+100 && !(b>r+30 && b>g+20)) c++; }
+    if(c>=.8*(xB/2)) rows.push(y);
+  }
+  const gs = []; let grp = [];
+  for(const y of rows){ if(grp.length && y-grp[grp.length-1]>2){ gs.push(mean(grp)); grp=[]; } grp.push(y); }
+  if(grp.length) gs.push(mean(grp));
+  if(gs.length<2 || gs.length>3) return;
+  const yU = gs[0], yL = gs[gs.length-1];
+  if(yL-yU<30) return;
+  if(gs.length===3 && Math.abs(gs[1]-(yU+yL)/2) > .12*(yL-yU)) return;
+  const ppu = (yL-yU)/40, wy0 = Math.max(yA, Math.floor(yU-32*ppu)), wy1 = Math.min(yB, Math.ceil(yL+32*ppu));
+  const lime = (x,y) => { const i=(y*W+x)*4, r=data[i], g=data[i+1], b=data[i+2]; return g>140 && g>r+25 && g>b+80; };
+  let found = 0, mn = 1e9, mx = -1;
+  const ys = L.map(c => {
+    const xs = Math.round(c.x), arr = [];
+    for(let x=xs-1;x<=xs+1;x++) for(let y=wy0;y<wy1;y++) if(lime(x,y)) arr.push(y);
+    if(!arr.length) return null; arr.sort((a,b)=>a-b); found++; return arr[arr.length>>1];
+  });
+  if(found < .6*L.length) return;
+  for(let i=0;i<ys.length;i++) if(ys[i]==null){
+    let a=i-1; while(a>=0 && ys[a]==null) a--; let b=i+1; while(b<ys.length && ys[b]==null) b++;
+    ys[i] = a>=0 && b<ys.length ? ys[a]+(ys[b]-ys[a])*(i-a)/(b-a) : a>=0 ? ys[a] : ys[b];
+  }
+  L.forEach((c,i) => { c.rsiy = ys[i]; c.rsiv = 70 - 40*(ys[i]-yU)/(yL-yU); mn = Math.min(mn, ys[i]); mx = Math.max(mx, ys[i]); });
+  S.rsiMode = 'panel';
+  S.rsiInfo = {found, total:L.length, yU, yL, panel:{x0:0, y0:Math.min(mn,yU)-8, x1:xB, y1:Math.max(mx,yL)+8}};
+}
+function rsiSeriesNow(){
+  const all = S.candles, base = S.skipLive ? all.slice(0,-1) : all, win = base.slice(-N);
+  if(win.length>3 && win.every(c=>Number.isFinite(c.rsiv))) return {vals:win.map(c=>c.rsiv), src:'panel'};
+  const cl = win.map(c=>c.c), vals = [];
+  for(let k=cl.length-5;k<=cl.length;k++) vals.push(rsi(cl.slice(0,k), Math.min(14,k-1)));
+  return {vals, src:'calc'};
+}
+function strongCheck(r){
+  const dir = r.dir; if(!dir) return null;
+  const rs = rsiSeriesNow(), v = rs.vals, x = v[v.length-1], q = v[Math.max(0,v.length-4)];
+  const sg = u => (u>=0?'+':'−')+Math.abs(u).toFixed(2);
+  const checks = [
+    {label:'الموثوقية ≥ 70%', val:r.final+'%', ok:r.final>=70},
+    {label:'RSI يؤكد '+(dir>0?'الشراء':'البيع'), val:x.toFixed(0)+(x-q>1?' ↑':q-x>1?' ↓':' →')+(rs.src==='panel'?' (لوحة)':' (محسوب)'), ok:rsiConfirms(dir,v)},
+    {label:'CCI لا يعاكس', val:sg(r.f.cci), ok:dir*r.f.cci>-.2},
+    {label:'الحجم لا يعاكس', val:sg(r.f.vol)+' / OBV '+sg(r.f.obv), ok:dir*r.f.vol>-.1 && dir*r.f.obv>-.2},
+    {label:'ATR: نفس القرار في الحالتين', val:r.atr ? (r.atr.same?'نعم':'لا') : '—', ok:!r.atr || r.atr.same, skip:!r.atr}
+  ];
+  return {checks, strong:checks.every(c=>c.ok||c.skip), rsi:{x, src:rs.src, vals:v}};
+}
+function drawRsi(u){
+  const I = S.rsiInfo; if(!I) return;
+  ctx.save();
+  ctx.setLineDash([9*u,6*u]); ctx.lineWidth = 1.5*u; ctx.strokeStyle = 'rgba(200,242,107,.8)'; ctx.strokeRect(I.panel.x0, I.panel.y0, I.panel.x1-I.panel.x0, I.panel.y1-I.panel.y0); ctx.setLineDash([]);
+  if(S.boxes) S.candles.forEach((c,i) => {
+    if(c.rsiy==null) return;
+    ctx.beginPath(); ctx.arc(c.x, c.rsiy, 3.5*u, 0, 7); ctx.fillStyle = (S.skipLive && i===S.candles.length-1) ? '#f4c15d' : '#e4ff9a'; ctx.fill();
+    ctx.lineWidth = 1.2*u; ctx.strokeStyle = '#06120f'; ctx.stroke();
+  });
+  ctx.restore();
+}
+function rsHtml(r){
+  const T = r.strong; if(!T) return '';
+  const x = T.rsi.x, v = T.rsi.vals, W=300, H=64, yv = u => 58 - clamp(u,0,100)/100*52;
+  const zone = x>70 ? 'تشبّع شرائي (فوق 70)' : x<30 ? 'تشبّع بيعي (تحت 30)' : x>=50 ? 'فوق 50 (زخم صاعد)' : 'تحت 50 (زخم هابط)';
+  const st = W/(v.length-1);
+  const svg = T.rsi.src==='panel' ? `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${[70,50,30].map(l=>`<line x1="0" x2="${W}" y1="${yv(l).toFixed(1)}" y2="${yv(l).toFixed(1)}" stroke="#4f7f73" stroke-dasharray="4 4"/>`).join('')}<polyline fill="none" stroke="#c8f26b" stroke-width="2" points="${v.map((u,i)=>`${(i*st).toFixed(1)},${yv(u).toFixed(1)}`).join(' ')}"/></svg>` : '';
+  const chk = `<ul class="chk">${T.checks.map(c=>`<li class="${c.skip?'skip':c.ok?'ok':'no'}"><i>${c.skip?'–':c.ok?'✔':'✘'}</i><span>${c.label}</span><b class="num">${c.val}</b></li>`).join('')}</ul>`;
+  const head = T.strong ? `✔ ${r.dir>0?'شراء قوي':'بيع قوي'}: كل الفلاتر تؤكد الاتجاه` : `الإشارة ${r.dir>0?'شراء':'بيع'} لكن لا تستوفي كل فلاتر الإشارة القوية`;
+  return `<h3>RSI وفلاتر الإشارة القوية</h3>
+    <div class="cvbox">
+      <div class="cc2"><small>RSI ${T.rsi.src==='panel'?'(من اللوحة)':'(محسوب)'}</small><b class="num">${x.toFixed(0)}</b><small>${zone}</small>${svg}</div>
+      <p class="strongbox" style="color:var(--${T.strong?(r.dir>0?'up':'down'):'amber'})">${head}</p>
+      ${chk}
+      <p class="src">RSI يُقرأ هكذا: فوق 50 وصاعد يدعم الشراء، وتحت 50 وهابط يدعم البيع، والخروج من تحت 30 أو من فوق 70 إشارة انعكاس، أما الشراء داخل تشبّع شرائي (فوق 72) فلا يُعتبر مؤكَّدًا. وزن RSI في القرار ${S.rsiMode==='panel' ? Math.round(S.rsiShare*100)+'% (من اللوحة)' : '≈ 4% (محسوب)'}.</p>
+    </div>`;
+}
 function hint(t, warn){ const h=$('#hint'); h.textContent=t; h.classList.toggle('warn', !!warn); }
 function toImg(e){
   const r = cv.getBoundingClientRect();
@@ -1493,6 +1614,7 @@ cv.addEventListener('pointerup', () => {
   if(S.cciRegion.x1-S.cciRegion.x0<60 || S.cciRegion.y1-S.cciRegion.y0<12) S.cciRegion = null;
   $('#btnCciClear').hidden = !S.cciRegion; run();
 });
+$('#rsiW').addEventListener('change', e => { S.rsiShare = parseFloat(e.target.value); if(S.base) run(); });
 $('#cciW').addEventListener('change', e => { S.cciShare = parseFloat(e.target.value); if(S.base) run(); });
 $('#optOtc').addEventListener('change', e => { S.otc = e.target.checked; if(S.base) run(); });
 $('#fear').addEventListener('change', e => { S.fear = parseFloat(e.target.value); if(S.base) run(); });
@@ -1508,7 +1630,7 @@ window.addEventListener('paste', e => {
 });
 window.addEventListener('dragover', e => e.preventDefault());
 window.addEventListener('drop', e => { if(!drop.contains(e.target)){ e.preventDefault(); if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); } });
-window.__S = S; window.__cci = readCci; window.__levels = levelsInfo; window.__atr = atrLayer; window.__run = run; window.__score = score;
+window.__S = S; window.__rsi = readRsi; window.__cci = readCci; window.__levels = levelsInfo; window.__atr = atrLayer; window.__run = run; window.__score = score;
 })();
 </script>
 </body>
