@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>قارئ الشموع — 34 مؤشرًا + RSI + CCI + Volume + ATR — M3</title>
+<title>قارئ الشموع — 34 مؤشرًا + RSI + Divergence + CCI + Volume + ATR — M3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@600;700&display=swap" rel="stylesheet">
@@ -196,6 +196,17 @@ details.cat .vote{font-size:12.5px;color:#cfe3da}
 .chk li.ok i{color:var(--up)}.chk li.no i{color:var(--down)}.chk li.skip i{color:var(--mute)}
 .chk li span{flex:1}.chk li b{font-weight:600;color:var(--mute)}
 .strongbox{margin:10px 0 0;font-weight:700;font-size:14px}
+.dvbox{background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:14px}
+.dvtwo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dvc{--dir:var(--amber);text-align:center;border:1px solid var(--line);border-radius:8px;padding:10px 6px;background:var(--panel)}
+.dvc[data-dir=up]{--dir:var(--up);border-color:var(--up)}.dvc[data-dir=down]{--dir:var(--down);border-color:var(--down)}
+.dvc small{display:block;color:var(--mute);font-size:12.5px;min-height:20px}
+.dvc .sw{display:block;font-family:var(--display);font-size:30px;line-height:1.2;color:var(--dir)}
+.dvc .num{font-weight:600}
+.dvc em{display:block;font-style:normal;font-size:12px;color:var(--mute);margin-top:2px}
+.dvag{margin:10px 0 0;font-weight:700;font-size:14px;text-align:center}
+.dvbox svg{width:100%;height:132px;display:block;margin-top:10px}
+.dvbox .src{margin:8px 0 0;font-size:12.5px;color:var(--mute)}
 @media(prefers-reduced-motion:reduce){.gauge .val{transition:none}}
 @media(max-width:520px){.verdict{font-size:44px}.vote{grid-template-columns:104px 1fr 40px}details.cat summary{grid-template-columns:104px 1fr 40px 12px}.spec{margin-inline-start:0}}
 </style>
@@ -786,6 +797,7 @@ function run(){
   res.lvEff = levelsEffect();
   res.cciEff = cciEffect();
   res.strong = strongCheck(res);
+  res.div = divergenceLayer(res);
   const live = S.skipLive ? ' (الأخيرة مستثناة لأنها لم تكتمل)' : '';
   hint('تمت قراءة ' + r.list.length + ' شمعة' + live + '.' + volNote + (S.cciInfo ? ' CCI: مقروء من اللوحة.' : ' CCI: محسوب من الشموع.') + (S.rsiInfo ? ' RSI: مقروء من اللوحة.' : ' RSI: محسوب من الشموع.'), res.used < N || (S.volRegion && S.volMode!=='real'));
   renderResult(res); render();
@@ -867,6 +879,7 @@ function render(){
   drawAtr(u);
   drawCci(u);
   drawRsi(u);
+  drawDiv(u);
 }
 function renderResult(r){
   const box = $('#result');
@@ -929,6 +942,7 @@ function renderResult(r){
     <h3>لون الشموع الستة القادمة</h3>
     <div class="colors">${cols}</div>
     <div class="cclab"><span>الشمعة 1 (الأقرب)</span><span>الشمعة 6</span></div>
+    ${dvHtml(r)}
     ${rsHtml(r)}
     ${cvHtml(r)}
     ${lvHtml(r)}
@@ -1538,100 +1552,129 @@ function rsHtml(r){
       <p class="src">RSI يُقرأ هكذا: فوق 50 وصاعد يدعم الشراء، وتحت 50 وهابط يدعم البيع، والخروج من تحت 30 أو من فوق 70 إشارة انعكاس، أما الشراء داخل تشبّع شرائي (فوق 72) فلا يُعتبر مؤكَّدًا. وزن RSI في القرار ${S.rsiMode==='panel' ? Math.round(S.rsiShare*100)+'% (من اللوحة)' : '≈ 4% (محسوب)'}.</p>
     </div>`;
 }
-function hint(t, warn){ const h=$('#hint'); h.textContent=t; h.classList.toggle('warn', !!warn); }
-function toImg(e){
-  const r = cv.getBoundingClientRect();
-  return {x:(e.clientX-r.left)*cv.width/r.width, y:(e.clientY-r.top)*cv.height/r.height};
-}
-function setMode(m){
-  S.mode = m;
-  cv.classList.toggle('crosshair', !!m);
-  cv.style.touchAction = m ? 'none' : 'auto';
-  $('#btnRegion').classList.toggle('on', m==='region');
-  $('#btnVol').classList.toggle('on', m==='vol');
-  document.querySelectorAll('[data-pick]').forEach(b => b.classList.toggle('on', m==='pick'+b.dataset.pick));
-  if(m==='region') hint('اسحب على الصورة لتحديد مستطيل يحتوي الشموع فقط (بدون الأسعار والأزرار).');
-  else if(m==='vol') hint('اسحب على لوحة أعمدة الحجم أسفل الشارت (الأعمدة فقط، وبنفس محور الزمن مثل الشموع).');
-  else if(m) hint('اضغط على الصورة عند الخط الذي تعرف سعره.');
-}
-cv.addEventListener('pointerdown', e => {
-  const p = toImg(e);
-  if(S.mode==='region' || S.mode==='vol'){
-    S.dragKey = S.mode==='vol' ? 'volRegion' : 'region';
-    S.drag = p; S[S.dragKey] = {x0:p.x,y0:p.y,x1:p.x,y1:p.y}; cv.setPointerCapture(e.pointerId); render();
-  } else if(S.mode && S.mode.startsWith('pick')){
-    const i = +S.mode.slice(4);
-    S.calib[i].y = p.y; $('#y'+i).textContent = 'تم'; setMode(null);
-    readCalib(); if(S.candles.length) run(); else render();
+function swing(arr, k){
+  const hi = [], lo = [];
+  for(let i=k;i<arr.length-k;i++){
+    let h=true, l=true;
+    for(let j=1;j<=k;j++){
+      if(!(arr[i]>arr[i-j] && arr[i]>=arr[i+j])) h=false;
+      if(!(arr[i]<arr[i-j] && arr[i]<=arr[i+j])) l=false;
+    }
+    if(h) hi.push(i); if(l) lo.push(i);
   }
-});
-cv.addEventListener('pointermove', e => {
-  if(!S.drag) return;
-  const p = toImg(e); S[S.dragKey] = {x0:S.drag.x, y0:S.drag.y, x1:p.x, y1:p.y}; render();
-});
-cv.addEventListener('pointerup', () => {
-  if(!S.drag) return;
-  const k = S.dragKey, r = S[k];
-  S[k] = {x0:Math.max(0,Math.min(r.x0,r.x1)), y0:Math.max(0,Math.min(r.y0,r.y1)), x1:Math.min(S.W-1,Math.max(r.x0,r.x1)), y1:Math.min(S.H-1,Math.max(r.y0,r.y1))};
-  S.drag = null; setMode(null);
-  if(S[k].x1-S[k].x0 < 60 || S[k].y1-S[k].y0 < 12){ S[k] = k==='region' ? autoRegion() : null; }
-  $('#btnVolClear').hidden = !S.volRegion;
-  run();
-});
-function readCalib(){
-  [0,1].forEach(i => {
-    const raw = $('#p'+i).value.trim().replace(',', '.');
-    S.calib[i].raw = raw; const v = parseFloat(raw); S.calib[i].p = isFinite(v) ? v : null;
-  });
+  return {hi, lo};
 }
-document.querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => setMode(S.mode==='pick'+b.dataset.pick ? null : 'pick'+b.dataset.pick)));
-['p0','p1'].forEach(id => $('#'+id).addEventListener('input', () => { readCalib(); if(S.result){ renderResult(S.result); render(); } }));
-$('#btnRegion').addEventListener('click', () => setMode(S.mode==='region' ? null : 'region'));
-$('#btnVol').addEventListener('click', () => setMode(S.mode==='vol' ? null : 'vol'));
-$('#btnVolClear').addEventListener('click', () => { S.volRegion = null; $('#btnVolClear').hidden = true; if(S.base) run(); });
-$('#btnNew').addEventListener('click', () => { $('#stage').hidden = true; $('#drop').hidden = false; $('#file').value=''; S.result=null; S.base=null; S.volRegion=null; $('#btnVolClear').hidden=true; renderResult(null); $('#result').innerHTML = '<div class="empty"><div>سيظهر التوقع هنا بعد رفع الصورة</div></div>'; });
-$('#optBoxes').addEventListener('change', e => { S.boxes = e.target.checked; render(); });
-$('#optLive').addEventListener('change', e => { S.skipLive = e.target.checked; if(S.base) run(); });
-$('#btnAtr').addEventListener('click', () => { setMode(S.mode==='atr' ? null : 'atr'); if(S.mode==='atr') hint('اسحب على لوحة مؤشر ATR أسفل الشارت (الخط الأزرق فقط).'); });
-$('#btnAtrClear').addEventListener('click', () => { S.atrRegion = null; $('#btnAtrClear').hidden = true; if(S.base) run(); });
-cv.addEventListener('pointerdown', e => { if(S.mode!=='atr') return; const p = toImg(e); S.atrDrag = p; S.atrRegion = {x0:p.x,y0:p.y,x1:p.x,y1:p.y}; cv.setPointerCapture(e.pointerId); render(); });
-cv.addEventListener('pointermove', e => { if(!S.atrDrag) return; const p = toImg(e); S.atrRegion = {x0:S.atrDrag.x,y0:S.atrDrag.y,x1:p.x,y1:p.y}; render(); });
-cv.addEventListener('pointerup', () => {
-  if(!S.atrDrag) return; const r = S.atrRegion;
-  S.atrRegion = {x0:Math.max(0,Math.min(r.x0,r.x1)), y0:Math.max(0,Math.min(r.y0,r.y1)), x1:Math.min(S.W-1,Math.max(r.x0,r.x1)), y1:Math.min(S.H-1,Math.max(r.y0,r.y1))};
-  S.atrDrag = null; setMode(null);
-  if(S.atrRegion.x1-S.atrRegion.x0<60 || S.atrRegion.y1-S.atrRegion.y0<12) S.atrRegion = null;
-  $('#btnAtrClear').hidden = !S.atrRegion; run();
-});
-$('#btnCci').addEventListener('click', () => { setMode(S.mode==='cci' ? null : 'cci'); if(S.mode==='cci') hint('اسحب على لوحة CCI أسفل الشارت (الخط الذهبي مع خطي ±100).'); });
-$('#btnCciClear').addEventListener('click', () => { S.cciRegion = null; $('#btnCciClear').hidden = true; if(S.base) run(); });
-cv.addEventListener('pointerdown', e => { if(S.mode!=='cci') return; const p = toImg(e); S.cciDrag = p; S.cciRegion = {x0:p.x,y0:p.y,x1:p.x,y1:p.y}; cv.setPointerCapture(e.pointerId); render(); });
-cv.addEventListener('pointermove', e => { if(!S.cciDrag) return; const p = toImg(e); S.cciRegion = {x0:S.cciDrag.x,y0:S.cciDrag.y,x1:p.x,y1:p.y}; render(); });
-cv.addEventListener('pointerup', () => {
-  if(!S.cciDrag) return; const r = S.cciRegion;
-  S.cciRegion = {x0:Math.max(0,Math.min(r.x0,r.x1)), y0:Math.max(0,Math.min(r.y0,r.y1)), x1:Math.min(S.W-1,Math.max(r.x0,r.x1)), y1:Math.min(S.H-1,Math.max(r.y0,r.y1))};
-  S.cciDrag = null; setMode(null);
-  if(S.cciRegion.x1-S.cciRegion.x0<60 || S.cciRegion.y1-S.cciRegion.y0<12) S.cciRegion = null;
-  $('#btnCciClear').hidden = !S.cciRegion; run();
-});
-$('#rsiW').addEventListener('change', e => { S.rsiShare = parseFloat(e.target.value); if(S.base) run(); });
-$('#cciW').addEventListener('change', e => { S.cciShare = parseFloat(e.target.value); if(S.base) run(); });
-$('#optOtc').addEventListener('change', e => { S.otc = e.target.checked; if(S.base) run(); });
-$('#fear').addEventListener('change', e => { S.fear = parseFloat(e.target.value); if(S.base) run(); });
-$('#file').addEventListener('change', e => loadFile(e.target.files[0]));
-const drop = $('#drop');
-['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
-['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
-drop.addEventListener('drop', e => loadFile(e.dataTransfer.files[0]));
-drop.addEventListener('keydown', e => { if(e.key==='Enter' || e.key===' '){ e.preventDefault(); $('#file').click(); } });
-window.addEventListener('paste', e => {
-  const it = [...(e.clipboardData?.items||[])].find(i => i.type.startsWith('image/'));
-  if(it) loadFile(it.getAsFile());
-});
-window.addEventListener('dragover', e => e.preventDefault());
-window.addEventListener('drop', e => { if(!drop.contains(e.target)){ e.preventDefault(); if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); } });
-window.__S = S; window.__rsi = readRsi; window.__cci = readCci; window.__levels = levelsInfo; window.__atr = atrLayer; window.__run = run; window.__score = score;
-})();
-</script>
-</body>
-</html>
+function findDivergence(w, rs){
+  const n = w.length; if(n<12 || rs.length!==n) return null;
+  const A = Math.max(atr(w),1e-6), sw = swing(rs,2), cand = [];
+  const pxHi = i => { let b=-1, v=-1e18; for(let j=Math.max(0,i-1); j<=Math.min(n-1,i+1); j++) if(w[j].h>v){ v=w[j].h; b=j; } return {j:b, v}; };
+  const pxLo = i => { let b=-1, v=1e18; for(let j=Math.max(0,i-1); j<=Math.min(n-1,i+1); j++) if(w[j].l<v){ v=w[j].l; b=j; } return {j:b, v}; };
+  const scan = (list, isHigh) => {
+    for(let q=list.length-1; q>=1; q--){
+      const b = list[q], a = list[q-1];
+      if(n-1-b>8) break;
+      if(b-a<3 || b-a>20) continue;
+      const pa = isHigh ? pxHi(a) : pxLo(a), pb = isHigh ? pxHi(b) : pxLo(b);
+      const dP = (pb.v-pa.v)/A, dR = rs[b]-rs[a];
+      let dir=0, kind='';
+      if(isHigh){ if(dP>.1 && dR<-2){ dir=-1; kind='regular'; } else if(dP<-.1 && dR>2){ dir=-1; kind='hidden'; } }
+      else { if(dP<-.1 && dR>2){ dir=1; kind='regular'; } else if(dP>.1 && dR<-2){ dir=1; kind='hidden'; } }
+      if(!dir) continue;
+      const zone = kind==='regular' ? ((isHigh ? rs[a]>=60 : rs[a]<=40) ? 1 : .4) : .7;
+      let st = .35*Math.min(1,Math.abs(dR)/15) + .25*Math.min(1,Math.abs(dP)/1.2) + .2*zone + .2*Math.max(0,1-(n-1-b)/10);
+      st = clamp(st,0,1)*(kind==='hidden' ? .85 : 1);
+      cand.push({dir, kind, isHigh, strength:st, ago:n-1-b, dP, dR,
+        a:{iR:a, iP:pa.j, rsi:rs[a], px:pa.v}, b:{iR:b, iP:pb.j, rsi:rs[b], px:pb.v}});
+      break;
+    }
+  };
+  scan(sw.hi, true); scan(sw.lo, false);
+  if(!cand.length) return null;
+  cand.sort((x,y) => x.ago-y.ago || y.strength-x.strength);
+  return cand[0];
+}
+function rsiSeriesFull(cl, p){
+  const n = cl.length, out = new Array(n).fill(50); if(n<=p+1) return out;
+  let g=0, l=0; for(let i=1;i<=p;i++){ const d=cl[i]-cl[i-1]; if(d>=0) g+=d; else l-=d; }
+  g/=p; l/=p; const f = () => l===0 ? 100 : 100-100/(1+g/l);
+  for(let i=0;i<=p;i++) out[i] = f();
+  for(let i=p+1;i<n;i++){ const d=cl[i]-cl[i-1]; g=(g*(p-1)+Math.max(d,0))/p; l=(l*(p-1)+Math.max(-d,0))/p; out[i]=f(); }
+  return out;
+}
+function divergenceLayer(res){
+  const all = S.candles, base = S.skipLive ? all.slice(0,-1) : all.slice();
+  if(base.length<16) return null;
+  const usePanel = base.every(c => Number.isFinite(c.rsiv));
+  const rsAll = usePanel ? base.map(c=>c.rsiv) : rsiSeriesFull(base.map(c=>c.c), 14);
+  const win = base.slice(-N), off = base.length-win.length, rs = rsAll.slice(off);
+  const cur = findDivergence(win, rs);
+  let n = 0, hit = 0; const seen = new Set();
+  for(let t=15; t<=base.length-1-HZ; t++){
+    const a = Math.max(0,t-N+1), d = findDivergence(base.slice(a,t+1), rsAll.slice(a,t+1));
+    if(!d) continue;
+    const key = (a+d.b.iR)+'|'+d.isHigh; if(seen.has(key)) continue; seen.add(key);
+    const mv = base[t+HZ].c - base[t].c; if(mv===0) continue;
+    n++; if((d.dir>0)===(mv>0)) hit++;
+  }
+  const out = {dir:0, usePanel, n, hit, win:win.map(c=>({c:c.c,h:c.h,l:c.l})), rs};
+  if(!cur) return out;
+  let conf = 50 + 30*cur.strength;
+  if(n>=6) conf = .6*conf + .4*((hit+10)/(n+20)*100);
+  return {...out, ...cur, conf:Math.round(clamp(conf,50,82)),
+    a:{...cur.a, absP:off+cur.a.iP, absR:off+cur.a.iR}, b:{...cur.b, absP:off+cur.b.iP, absR:off+cur.b.iR}};
+}
+function drawDiv(u){
+  const r = S.result, D = r && r.div; if(!D || !D.dir || !S.candles.length) return;
+  const C = S.candles, ca = C[D.a.absP], cb = C[D.b.absP]; if(!ca || !cb) return;
+  const col = D.dir>0 ? '#86e89a' : '#ff7b66';
+  ctx.save(); ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 2.6*u; ctx.setLineDash(D.kind==='hidden' ? [6*u,4*u] : []);
+  const y1 = D.isHigh ? ca.yh : ca.yl, y2 = D.isHigh ? cb.yh : cb.yl;
+  ctx.beginPath(); ctx.moveTo(ca.x,y1); ctx.lineTo(cb.x,y2); ctx.stroke(); ctx.setLineDash([]);
+  [[ca.x,y1],[cb.x,y2]].forEach(([x,y]) => { ctx.beginPath(); ctx.arc(x,y,4.5*u,0,7); ctx.fill(); });
+  ctx.font = `700 ${12*u}px sans-serif`; ctx.textAlign = 'center';
+  ctx.fillText('Div ' + (D.dir>0?'↑':'↓'), (ca.x+cb.x)/2, Math.min(y1,y2) + (D.isHigh ? -10*u : 20*u));
+  const ra = C[D.a.absR], rb = C[D.b.absR];
+  if(S.rsiInfo && ra && rb && ra.rsiy!=null && rb.rsiy!=null){
+    ctx.setLineDash(D.kind==='hidden' ? [6*u,4*u] : []); ctx.beginPath(); ctx.moveTo(ra.x,ra.rsiy); ctx.lineTo(rb.x,rb.rsiy); ctx.stroke(); ctx.setLineDash([]);
+    [[ra.x,ra.rsiy],[rb.x,rb.rsiy]].forEach(([x,y]) => { ctx.beginPath(); ctx.arc(x,y,4.5*u,0,7); ctx.fill(); });
+  }
+  ctx.restore();
+}
+function dvSvg(D){
+  const W=300, H1=70, H2=56, gap=6, n=D.win.length, st=W/(n-1);
+  const mn = Math.min(...D.win.map(c=>c.l)), mx = Math.max(...D.win.map(c=>c.h));
+  const py = v => H1-4-(v-mn)/((mx-mn)||1)*(H1-8), ry = v => H1+gap+H2-3-clamp(v,0,100)/100*(H2-6), X = i => (i*st).toFixed(1);
+  const col = D.dir>0 ? '#86e89a' : '#ff7b66';
+  let g = [30,50,70].map(l => `<line x1="0" x2="${W}" y1="${ry(l).toFixed(1)}" y2="${ry(l).toFixed(1)}" stroke="#4f7f73" stroke-dasharray="4 4"/>`).join('');
+  g += `<polyline fill="none" stroke="#8fb0a6" stroke-width="1.6" points="${D.win.map((c,i)=>`${X(i)},${py(c.c).toFixed(1)}`).join(' ')}"/>`;
+  g += `<polyline fill="none" stroke="#c8f26b" stroke-width="1.8" points="${D.rs.map((v,i)=>`${X(i)},${ry(v).toFixed(1)}`).join(' ')}"/>`;
+  if(D.dir){
+    const da = D.dir ? (D.kind==='hidden' ? '5 3' : '') : '';
+    g += `<line x1="${X(D.a.iP)}" y1="${py(D.a.px).toFixed(1)}" x2="${X(D.b.iP)}" y2="${py(D.b.px).toFixed(1)}" stroke="${col}" stroke-width="2.4" stroke-dasharray="${da}"/>`;
+    g += `<line x1="${X(D.a.iR)}" y1="${ry(D.a.rsi).toFixed(1)}" x2="${X(D.b.iR)}" y2="${ry(D.b.rsi).toFixed(1)}" stroke="${col}" stroke-width="2.4" stroke-dasharray="${da}"/>`;
+    g += [[D.a.iP,py(D.a.px)],[D.b.iP,py(D.b.px)],[D.a.iR,ry(D.a.rsi)],[D.b.iR,ry(D.b.rsi)]].map(([i,y]) => `<circle cx="${X(i)}" cy="${y.toFixed(1)}" r="3.5" fill="${col}"/>`).join('');
+  }
+  return `<svg viewBox="0 0 ${W} ${H1+gap+H2}" preserveAspectRatio="none" aria-hidden="true">${g}</svg>`;
+}
+function dvHtml(r){
+  const D = r.div; if(!D) return '';
+  const wd = d => d>0 ? 'شراء' : d<0 ? 'بيع' : 'لا يوجد', cl = d => d>0 ? 'up' : d<0 ? 'down' : 'flat';
+  const kindTxt = D.dir ? `${D.kind==='regular'?'عادي':'مخفي'} ${D.dir>0?'صاعد':'هابط'}` : '';
+  const agree = !D.dir ? 'لا يوجد دايفرجنس حاليًا، فالقرار للمؤشرات وحدها'
+    : D.dir===r.dir ? '✔ القراران متفقان' : '✘ القراران متعارضان — الأفضل الانتظار أو تخفيف الحجم';
+  const agCol = !D.dir ? 'var(--mute)' : D.dir===r.dir ? 'var(--up)' : 'var(--amber)';
+  const why = !D.dir ? '' : D.kind==='regular'
+    ? (D.isHigh ? 'السعر صنع قمة أعلى بينما RSI صنع قمة أدنى: ضعف في الصعود قد ينعكس هبوطًا.' : 'السعر صنع قاعًا أدنى بينما RSI صنع قاعًا أعلى: ضعف في الهبوط قد ينعكس صعودًا.')
+    : (D.isHigh ? 'السعر صنع قمة أدنى بينما RSI صنع قمة أعلى: استمرار محتمل للهبوط.' : 'السعر صنع قاعًا أعلى بينما RSI صنع قاعًا أدنى: استمرار محتمل للصعود.');
+  const det = !D.dir ? '' : `<p class="src">${D.isHigh?'القمة':'القاع'} الأولى: RSI <b class="num">${D.a.rsi.toFixed(0)}</b> → الأخيرة: RSI <b class="num">${D.b.rsi.toFixed(0)}</b> (قبل <b class="num">${D.ago}</b> شموع)، فرق السعر <b class="num">${(Math.abs(D.b.px-D.a.px)/r.A).toFixed(2)} ATR</b>. ${why}</p>`;
+  const hist = D.n>=1 ? `ظهر الدايفرجنس في هذا الشارت ${D.n} مرة: أصاب اتجاهه بعد ${HZ} شموع في ${D.hit}.` : 'لا حالات دايفرجنس سابقة في اللقطة لقياس موثوقيته.';
+  return `<h3>قرار المؤشرات مقابل قرار الدايفرجنس (RSI)</h3>
+    <div class="dvbox">
+      <div class="dvtwo">
+        <div class="dvc" data-dir="${cl(r.dir)}"><small>قرار المؤشرات (${r.total} مؤشرًا)</small><b class="sw">${wd(r.dir)}</b><span class="num">${r.final}%</span><em>خلال ${HZ} شموع (15 دقيقة)</em></div>
+        <div class="dvc" data-dir="${cl(D.dir)}"><small>قرار الدايفرجنس</small><b class="sw">${wd(D.dir)}</b><span class="num">${D.dir ? D.conf+'%' : '—'}</span><em>${D.dir ? 'دايفرجنس '+kindTxt : 'لا دايفرجنس'}</em></div>
+      </div>
+      <p class="dvag" style="color:${agCol}">${agree}</p>
+      ${D.dir ? dvSvg(D) : ''}
+      ${det}
+      <p class="src">${hist} RSI ${D.usePanel ? 'مقروء من 
