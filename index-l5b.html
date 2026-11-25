@@ -1,0 +1,1859 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>قارئ الشموع — 34 مؤشرًا + RSI + Divergence + آخر 5 شموع + CCI + Volume + ATR — M3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+--ink:#091a17;
+--panel:#0f2924;
+--panel-2:#153630;
+--line:#25524a;
+--text:#e8f3ee;
+--mute:#8fb0a6;
+--up:#86e89a;
+--down:#ff7b66;
+--amber:#f4c15d;
+--focus:#7cc4ff;
+--dir:var(--amber);
+--ui:'IBM Plex Sans Arabic','Segoe UI',Tahoma,sans-serif;
+--display:'Reem Kufi','IBM Plex Sans Arabic','Segoe UI',Tahoma,sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{color-scheme:dark}
+body{
+margin:0;min-height:100vh;color:var(--text);font-family:var(--ui);
+background:
+linear-gradient(rgba(150,230,190,.05) 1px,transparent 1px) 0 0/100% 44px,
+linear-gradient(90deg,rgba(150,230,190,.05) 1px,transparent 1px) 0 0/44px 100%,
+radial-gradient(1200px 500px at 85% -10%,#14463b 0,transparent 60%),
+var(--ink);
+line-height:1.6;
+}
+button,input,summary{font-family:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.num{direction:ltr;unicode-bidi:isolate;font-variant-numeric:tabular-nums}
+.top{max-width:1180px;margin:0 auto;padding:28px 20px 8px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.logo{width:44px;height:44px;flex:none}
+.top h1{margin:0;font-family:var(--display);font-size:28px;letter-spacing:.2px;line-height:1.2}
+.top p{margin:2px 0 0;color:var(--mute);font-size:14px}
+.spec{margin-inline-start:auto;display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:13px;color:var(--mute);background:rgba(15,41,36,.7)}
+.chip b{color:var(--text);font-weight:600}
+.layout{max-width:1180px;margin:0 auto;padding:16px 20px 56px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);gap:20px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px}
+.stage-card{padding:14px}
+.drop{
+display:grid;place-items:center;text-align:center;gap:6px;min-height:380px;padding:28px;cursor:pointer;
+border:1.5px dashed #3d7a6a;border-radius:10px;background:rgba(9,26,23,.45);transition:border-color .15s,background .15s;
+}
+.drop:hover,.drop.over{border-color:var(--amber);background:rgba(244,193,93,.06)}
+.drop svg{width:54px;height:54px;color:var(--amber)}
+.drop strong{font-size:19px;font-weight:600}
+.drop span{color:var(--mute);font-size:14px}
+#file{display:none}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.btn{
+background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-size:14px;cursor:pointer;transition:border-color .15s,background .15s;
+}
+.btn:hover{border-color:var(--amber)}
+.btn.on{border-color:var(--focus);background:#1c4a40}
+.toggle{display:inline-flex;align-items:center;gap:8px;font-size:14px;color:var(--text);cursor:pointer;padding:6px 4px}
+.toggle input{accent-color:var(--amber);width:17px;height:17px}
+.canvas-wrap{background:#06120f;border-radius:10px;border:1px solid var(--line);display:flex;justify-content:center;overflow:hidden}
+#cv{display:block;width:auto;height:auto;max-width:100%;max-height:72vh;cursor:default}
+#cv.crosshair{cursor:crosshair}
+.hint{min-height:22px;margin:10px 2px 0;color:var(--mute);font-size:13.5px}
+.hint.warn{color:var(--amber)}
+details.calib{margin-top:10px;border:1px solid var(--line);border-radius:8px;background:rgba(9,26,23,.4)}
+details.calib summary{cursor:pointer;padding:10px 14px;font-size:14px}
+.calrows{padding:2px 14px 14px;display:grid;gap:10px}
+.calrow{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
+.calrow input{background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;min-width:0;direction:ltr;text-align:left}
+.calrow small{color:var(--mute)}
+.calnote{color:var(--mute);font-size:13px;margin:0}
+.result{padding:22px}
+.empty{color:var(--mute);text-align:center;padding:60px 10px}
+.empty svg{width:46px;height:46px;opacity:.7;margin-bottom:8px}
+.res[data-dir=up]{--dir:var(--up)}
+.res[data-dir=down]{--dir:var(--down)}
+.res[data-dir=flat]{--dir:var(--amber)}
+.head{display:flex;align-items:center;gap:14px}
+.arrow{width:64px;height:64px;flex:none;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--dir) 16%,transparent);border:1.5px solid var(--dir)}
+.arrow svg{width:30px;height:30px;color:var(--dir)}
+.verdict{font-family:var(--display);font-size:54px;line-height:1;color:var(--dir);margin:0}
+.sub{color:var(--mute);font-size:13.5px;margin:6px 0 0}
+.grade{display:inline-block;margin-top:8px;border-radius:6px;padding:2px 10px;font-size:13px;font-weight:600;border:1px solid var(--dir);color:var(--dir)}
+.gaugebox{margin:18px auto 4px;max-width:300px;text-align:center}
+.gauge{width:100%;display:block}
+.gauge .track{stroke:#1d463d}
+.gauge .val{stroke:var(--dir);transition:stroke-dasharray 1.1s cubic-bezier(.2,.8,.2,1)}
+.gauge .tick{stroke:#091a17;stroke-width:2}
+.gnum{font-family:var(--display);font-size:46px;line-height:1;margin-top:-62px;position:relative}
+.glab{color:var(--mute);font-size:13px;margin-top:6px;position:relative}
+.target{margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cell{background:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.cell small{display:block;color:var(--mute);font-size:12.5px}
+.cell b{font-size:18px;font-weight:600}
+.cell.wide{grid-column:1/-1}
+h3{font-size:14px;font-weight:600;margin:22px 0 10px;color:var(--mute)}
+.votes{display:grid;gap:9px}
+.vote{display:grid;grid-template-columns:128px 1fr 44px;gap:10px;align-items:center;font-size:13.5px}
+.bar{position:relative;height:8px;background:#183a33;border-radius:4px}
+.bar::after{content:"";position:absolute;inset-block:-3px;inset-inline-start:50%;width:1px;background:#4f7f73}
+.bar i{position:absolute;top:0;bottom:0;border-radius:4px}
+.vote em{font-style:normal;text-align:end;color:var(--mute)}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13.5px}
+.facts div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #1f4a41;padding:5px 0}
+.facts span{color:var(--mute)}
+.note{margin:18px 0 0;font-size:12.5px;color:var(--mute);border-top:1px solid var(--line);padding-top:12px}
+.colors{display:flex;direction:ltr;gap:6px;justify-content:space-between}
+.cc{flex:1;text-align:center;font-size:12px;color:var(--mute)}
+.cc .cd{height:88px;position:relative;margin:0 auto 4px;width:100%}
+.cc .wk{position:absolute;left:50%;width:2px;margin-left:-1px;border-radius:1px}
+.cc .bd{position:absolute;left:50%;width:18px;margin-left:-9px;border-radius:3px}
+.cc b{display:block;font-size:14px;font-weight:600}
+.cc.lo{opacity:.5}
+.cclab{display:flex;justify-content:space-between;color:var(--mute);font-size:12px;direction:ltr;margin-top:6px}
+details.cat{border-bottom:1px solid #1f4a41}
+details.cat summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:128px 1fr 44px 14px;gap:10px;align-items:center;font-size:13.5px;padding:8px 0}
+details.cat summary::-webkit-details-marker{display:none}
+details.cat summary::after{content:"▾";color:var(--mute);font-size:12px;transition:transform .15s}
+details.cat[open] summary::after{transform:rotate(180deg)}
+details.cat .votes{padding:2px 0 12px}
+details.cat .vote{font-size:12.5px;color:#cfe3da}
+.catbar{font-weight:600}
+.toggle select{background:var(--ink);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:13.5px}
+.pers{background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:14px}
+.pers .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pers .pc{text-align:center;border:1px solid var(--line);border-radius:8px;padding:10px 6px;background:var(--panel)}
+.pers .pc small{display:block;color:var(--mute);font-size:12.5px}
+.pers .pc b{font-family:var(--display);font-size:34px;line-height:1.15}
+.pers .good{color:var(--up)}.pers .mid{color:var(--amber)}.pers .bad{color:var(--down)}
+.pers .verdict2{margin:10px 0 0;font-weight:600;font-size:14px}
+.pers ul{margin:8px 0 0;padding-inline-start:18px;color:#cfe3da;font-size:12.5px}
+.pers .mini{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px;font-size:12.5px}
+.pers .mini div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #1f4a41;padding:4px 0}
+.pers .mini span{color:var(--mute)}
+.pers .why{margin:10px 0 0;font-size:12px;color:var(--mute)}
+.atrbox{background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:14px}
+.atrbox .src{margin:0 0 10px;font-size:12.5px;color:var(--mute)}
+.atrbox .src b{color:var(--text)}
+.scens{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.scen{--dir:var(--amber);text-align:center;border:1px solid var(--line);border-radius:8px;padding:10px 6px;background:var(--panel);position:relative}
+.scen[data-dir=up]{--dir:var(--up)}.scen[data-dir=down]{--dir:var(--down)}
+.scen.active{border-color:var(--dir);box-shadow:0 0 0 1px var(--dir) inset}
+.scen small{display:block;color:var(--mute);font-size:12.5px;min-height:38px}
+.scen .sw{display:block;font-family:var(--display);font-size:30px;line-height:1.2;color:var(--dir)}
+.scen .num{font-weight:600}
+.scen em{display:block;font-style:normal;font-size:12px;color:var(--mute);margin-top:2px}
+.scen .now{position:absolute;top:-9px;inset-inline-start:10px;background:var(--amber);color:#091a17;font-size:11px;font-weight:700;border-radius:4px;padding:0 6px}
+.atrbox .dec{margin:10px 0 0;font-weight:600;font-size:14px}
+.atrbox .spark{width:100%;height:76px;display:block;margin-top:10px}
+.atrbox details.atrd{margin-top:8px}
+.atrbox details.atrd summary{cursor:pointer;font-size:13px;color:var(--mute)}
+.chips{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;direction:ltr;margin-top:8px}
+.chips span{background:var(--panel);border:1px solid var(--line);border-radius:5px;font-size:11.5px;text-align:center;padding:2px 0}
+.chips span i{font-style:normal;color:var(--mute)}
+.lvbox{background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:14px}
+.lvbox .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lvbox .lc{border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--panel)}
+.lvbox .lc small{display:block;color:var(--mute);font-size:12.5px}
+.lvbox .lc b{font-size:15px;font-weight:600}
+.lvbox .lc.r b{color:#e69cff}.lvbox .lc.s b{color:#6fe3d9}
+.lvbox ul{margin:10px 0 0;padding:0;list-style:none;font-size:12.5px;color:#cfe3da}
+.lvbox li{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #1f4a41;padding:4px 0}
+.lvbox li i{font-style:normal;color:var(--mute)}
+.lvbox .tilt{margin:10px 0 0;font-weight:600;font-size:14px}
+.lvbox .why{margin:10px 0 0;font-size:12px;color:var(--mute)}
+.lvbox .eff{margin:10px 0 0;font-size:12.5px;color:#cfe3da;border-top:1px solid var(--line);padding-top:8px}
+.cvbox{background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:14px}
+.cvbox .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cvbox .cc2{border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--panel)}
+.cvbox .cc2 small{display:block;color:var(--mute);font-size:12.5px}
+.cvbox .cc2 b{font-size:20px;font-weight:600}
+.cvbox svg{width:100%;height:64px;display:block;margin-top:6px}
+.cvbox .tilt{margin:10px 0 0;font-weight:600;font-size:14px}
+.cvbox .src{margin:8px 0 0;font-size:12.5px;color:var(--mute)}
+.chk{list-style:none;margin:10px 0 0;padding:0;font-size:13px}
+.chk li{display:flex;gap:8px;align-items:baseline;padding:3px 0;border-bottom:1px solid #1f4a41}
+.chk li i{font-style:normal;width:16px;flex:none}
+.chk li.ok i{color:var(--up)}.chk li.no i{color:var(--down)}.chk li.skip i{color:var(--mute)}
+.chk li span{flex:1}.chk li b{font-weight:600;color:var(--mute)}
+.strongbox{margin:10px 0 0;font-weight:700;font-size:14px}
+.dvbox{background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:14px}
+.dvtwo{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.dvc{--dir:var(--amber);text-align:center;border:1px solid var(--line);border-radius:8px;padding:10px 6px;background:var(--panel)}
+.dvc[data-dir=up]{--dir:var(--up);border-color:var(--up)}.dvc[data-dir=down]{--dir:var(--down);border-color:var(--down)}
+.dvc small{display:block;color:var(--mute);font-size:12.5px;min-height:20px}
+.dvc .sw{display:block;font-family:var(--display);font-size:24px;line-height:1.2;color:var(--dir)}
+.dvc .num{font-weight:600}
+.dvc em{display:block;font-style:normal;font-size:12px;color:var(--mute);margin-top:2px}
+.dvag{margin:10px 0 0;font-weight:700;font-size:14px;text-align:center}
+.dvbox svg{width:100%;height:132px;display:block;margin-top:10px}
+.dvbox .src{margin:8px 0 0;font-size:12.5px;color:var(--mute)}
+.l5box{background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:14px}
+.l5top{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.l5top .cell{text-align:center;padding:8px 6px}
+.l5top .cell b{font-size:17px}
+.l5box .src{margin:8px 0 0;font-size:12.5px;color:var(--mute)}
+.l5box .evbar{display:inline-block;width:46px;height:6px;background:#183a33;border-radius:3px;vertical-align:middle;margin-inline-start:6px;overflow:hidden}
+.l5box .evbar i{display:block;height:100%;background:var(--amber)}
+@media(prefers-reduced-motion:reduce){.gauge .val{transition:none}}
+@media(max-width:520px){.verdict{font-size:44px}.vote{grid-template-columns:104px 1fr 40px}details.cat summary{grid-template-columns:104px 1fr 40px 12px}.spec{margin-inline-start:0}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <svg class="logo" viewBox="0 0 48 48" aria-hidden="true">
+    <rect x="1" y="1" width="46" height="46" rx="11" fill="#0f2924" stroke="#25524a"/>
+    <path d="M13 14v20M24 10v24M35 18v18" stroke="#8fb0a6" stroke-width="2" stroke-linecap="round"/>
+    <rect x="9.5" y="19" width="7" height="10" rx="1.5" fill="#ff7b66"/>
+    <rect x="20.5" y="16" width="7" height="12" rx="1.5" fill="#86e89a"/>
+    <rect x="31.5" y="22" width="7" height="9" rx="1.5" fill="#86e89a"/>
+  </svg>
+  <div>
+    <h1>قارئ الشموع</h1>
+    <p>ارفع لقطة شاشة للشارت، وسيقرأ الشموع بالألوان ويتوقع الاتجاه</p>
+  </div>
+  <div class="spec">
+    <span class="chip">الإطار <b class="num">M3</b></span>
+    <span class="chip"><b class="num">30</b> شمعة · <b class="num">34</b> مؤشرًا</span>
+    <span class="chip">يتوقع بعد <b class="num">6</b> شموع (<b class="num">15</b> د)</span>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="card stage-card" aria-label="لقطة الشاشة">
+    <label id="drop" class="drop" tabindex="0" for="file">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/><path d="M12 15V4"/><path d="m7.5 8.5 4.5-4.5 4.5 4.5"/></svg>
+      <strong>اسحب لقطة الشاشة هنا أو اضغط للاختيار</strong>
+      <span>يمكنك أيضًا لصقها مباشرة بـ Ctrl+V</span>
+    </label>
+    <input id="file" type="file" accept="image/*">
+
+    <div id="stage" hidden>
+      <div class="toolbar">
+        <button class="btn" id="btnNew" type="button">صورة جديدة</button>
+        <button class="btn" id="btnRegion" type="button">تحديد منطقة الشارت يدويًا</button>
+        <button class="btn" id="btnVol" type="button">تحديد لوحة الحجم</button>
+        <button class="btn" id="btnVolClear" type="button" hidden>إزالة الحجم</button>
+        <button class="btn" id="btnAtr" type="button">تحديد لوحة ATR</button>
+        <button class="btn" id="btnAtrClear" type="button" hidden>إزالة ATR</button>
+        <button class="btn" id="btnCci" type="button">تحديد لوحة CCI</button>
+        <button class="btn" id="btnCciClear" type="button" hidden>إزالة CCI</button>
+        <label class="toggle"><input type="checkbox" id="optBoxes" checked> إظهار قراءة الشموع</label>
+        <label class="toggle"><input type="checkbox" id="optLive" checked> تجاهل الشمعة الحالية غير المكتملة</label>
+        <label class="toggle"><input type="checkbox" id="optOtc" checked> سوق OTC</label>
+        <label class="toggle">وزن CCI
+          <select id="cciW" aria-label="وزن CCI في القرار">
+            <option value="0.07">عادي 7%</option>
+            <option value="0.15">متوسط 15%</option>
+            <option value="0.25" selected>عالٍ 25%</option>
+            <option value="0.35">مرتفع جدًا 35%</option>
+          </select>
+        </label>
+        <label class="toggle">حد الخوف
+          <select id="fear" aria-label="حد الخوف">
+            <option value="0.4">صارم (0.4 ATR)</option>
+            <option value="0.6" selected>عادي (0.6 ATR)</option>
+            <option value="0.9">متساهل (0.9 ATR)</option>
+          </select>
+        </label>
+        <label class="toggle">وزن RSI
+          <select id="rsiW" aria-label="وزن RSI في القرار">
+            <option value="0.04">عادي 4%</option>
+            <option value="0.12" selected>عالٍ 12%</option>
+            <option value="0.2">مرتفع 20%</option>
+          </select>
+        </label>
+      </div>
+      <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+      <div class="hint" id="hint" role="status"></div>
+
+      <details class="calib">
+        <summary>معايرة السعر (اختياري) — لعرض السعر المتوقع كرقم</summary>
+        <div class="calrows">
+          <p class="calnote">اختر نقطتين على الصورة من خطوط الشبكة أو من وسم السعر الحالي، ثم اكتب السعر عند كل نقطة.</p>
+          <div class="calrow"><button class="btn" type="button" data-pick="0">النقطة 1</button><input id="p0" inputmode="decimal" placeholder="مثال: 0.87000" aria-label="سعر النقطة 1"><small id="y0">لم تُحدد</small></div>
+          <div class="calrow"><button class="btn" type="button" data-pick="1">النقطة 2</button><input id="p1" inputmode="decimal" placeholder="مثال: 0.86000" aria-label="سعر النقطة 2"><small id="y1">لم تُحدد</small></div>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <aside class="card result" id="result" aria-live="polite">
+    <div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 20h18"/><path d="M6 16v-5M12 16V6M18 16v-8"/></svg>
+      <div>سيظهر التوقع هنا بعد رفع الصورة</div>
+    </div>
+  </aside>
+</main>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const cv = $('#cv'), ctx = cv.getContext('2d');
+const HZ = 6, N = 30;                      // 6 شموع للأمام، 30 شمعة للقراءة
+const GREEN = [70, 183, 52], RED = [255, 62, 31];   // ألوان شموع المنصة المأخوذة من اللقطة
+const S = {
+base: null, W: 0, H: 0, data: null, masks: {},
+region: null, candles: [], bw: 12, step: 17.6,
+volRegion: null, volMode: 'proxy', dragKey: null,
+mode: null, drag: null, calib: [{y:null,p:null},{y:null,p:null}],
+result: null, boxes: true, skipLive: true
+};
+S.fear = .6; S.otc = true; S.cciShare = .25; S.rsiShare = .12;
+const PH = 4;   // أفق الاستمرارية: 3 و4 شموع
+function loadFile(file){
+if(!file || !file.type.startsWith('image/')) return;
+const url = URL.createObjectURL(file);
+const img = new Image();
+img.onload = () => {
+let w = img.naturalWidth, h = img.naturalHeight;
+const k = Math.min(1, 2000 / Math.max(w, h));
+w = Math.round(w * k); h = Math.round(h * k);
+const b = document.createElement('canvas'); b.width = w; b.height = h;
+const bctx = b.getContext('2d', {willReadFrequently:true});
+bctx.drawImage(img, 0, 0, w, h);
+S.base = b; S.W = w; S.H = h; S.data = bctx.getImageData(0, 0, w, h).data; S.masks = {};
+cv.width = w; cv.height = h;
+S.calib = [{y:null,p:null},{y:null,p:null}]; $('#y0').textContent = $('#y1').textContent = 'لم تُحدد';
+$('#drop').hidden = true; $('#stage').hidden = false;
+URL.revokeObjectURL(url);
+S.region = autoRegion(); S.volRegion = null; $('#btnVolClear').hidden = true; S.cciRegion = null; $('#btnCciClear').hidden = true;
+autoPanels();
+run();
+};
+img.onerror = () => hint('تعذّر فتح الصورة، جرّب صورة بصيغة PNG أو JPG.', true);
+img.src = url;
+}
+function mask(tol){
+if(S.masks[tol]) return S.masks[tol];
+const {W,H,data} = S, m = new Uint8Array(W*H);
+for(let i=0,p=0;i<m.length;i++,p+=4){
+const r=data[p], g=data[p+1], b=data[p+2];
+if(Math.abs(r-GREEN[0])+Math.abs(g-GREEN[1])+Math.abs(b-GREEN[2]) < tol) m[i]=1;
+else if(Math.abs(r-RED[0])+Math.abs(g-RED[1])+Math.abs(b-RED[2]) < tol) m[i]=2;
+}
+return S.masks[tol]=m;
+}
+function autoRegion(){
+const m = mask(70), {W,H} = S;
+let bottom = H;
+for(let y=Math.floor(H*.45); y<H; y++){
+let run=0,best=0;
+for(let x=0;x<W;x++){ if(m[y*W+x]){ if(++run>best) best=run; } else run=0; }
+if(best > W*.14){ bottom = y; break; }
+}
+return {x0:0, y0:Math.floor(H*.17), x1:Math.floor(W*.85), y1:bottom-1};
+}
+function extract(r, tol){
+const m = mask(tol), W = S.W;
+const x0=Math.round(r.x0), x1=Math.round(r.x1), y0=Math.round(r.y0), y1=Math.round(r.y1);
+const has = new Uint8Array(x1-x0+2);
+for(let x=x0;x<=x1;x++) for(let y=y0;y<=y1;y++) if(m[y*W+x]){ has[x-x0]=1; break; }
+const cl = [];
+let x = x0;
+while(x<=x1){
+if(has[x-x0]){
+let s=x,e=x;
+while(x<=x1 && (has[x-x0] || has[x+1-x0])){ if(has[x-x0]) e=x; x++; }
+cl.push([s,e]);
+} else x++;
+}
+const widths = cl.map(c=>c[1]-c[0]+1).filter(w=>w>=6).sort((a,b)=>a-b);
+if(!widths.length) return {list:[],bw:12,step:17};
+const bw = widths[Math.floor(widths.length/2)];
+const list = [];
+for(const [s,e] of cl){
+const w = e-s+1;
+if(w < bw*.6 || w > bw*1.5) continue;
+let g=0,rd=0,hi=1e9,lo=-1,bT=1e9,bB=-1,maxC=0,maxY=0;
+for(let y=y0;y<=y1;y++){
+let c=0;
+for(let xx=s;xx<=e;xx++){ const v=m[y*W+xx]; if(v){ c++; if(v===1) g++; else rd++; } }
+if(c){ if(y<hi) hi=y; lo=y; if(c>maxC){maxC=c;maxY=y;} }
+if(c >= bw*.5){ if(y<bT) bT=y; bB=y; }
+}
+if(lo<0 || lo-hi<1) continue;
+if(bB<0){ bT=bB=maxY; }
+const up = g >= rd;
+const openY = up ? bB+1 : bT, closeY = up ? bT : bB+1;
+list.push({x:(s+e)/2, up, yh:hi, yl:lo+1, yo:openY, yc:closeY,
+o:-openY, c:-closeY, h:-hi, l:-(lo+1)});
+}
+if(list.length<2) return {list, bw, step:bw*1.45};
+const diffs = []; for(let i=1;i<list.length;i++) diffs.push(list[i].x-list[i-1].x);
+const step = diffs.slice().sort((a,b)=>a-b)[Math.floor(diffs.length/2)];
+const chain = [list[list.length-1]];
+for(let i=list.length-2;i>=0;i--){
+const d = chain[0].x - list[i].x;
+if(d > step*2.6) break;
+chain.unshift(list[i]);
+}
+return {list:chain, bw, step};
+}
+const mean = a => a.reduce((s,v)=>s+v,0)/a.length;
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+function ema(a,p){ const k=2/(p+1); let e=a[0]; const o=[e]; for(let i=1;i<a.length;i++){ e=a[i]*k+e*(1-k); o.push(e);} return o; }
+function atr(w,p=14){
+const t=[]; for(let i=1;i<w.length;i++){ const c=w[i], pc=w[i-1].c; t.push(Math.max(c.h-c.l, Math.abs(c.h-pc), Math.abs(c.l-pc))); }
+const s=t.slice(-p); return mean(s);
+}
+function rsi(cl,p){
+let g=0,l=0; for(let i=1;i<=p;i++){ const d=cl[i]-cl[i-1]; if(d>=0) g+=d; else l-=d; }
+g/=p; l/=p;
+for(let i=p+1;i<cl.length;i++){ const d=cl[i]-cl[i-1]; g=(g*(p-1)+Math.max(d,0))/p; l=(l*(p-1)+Math.max(-d,0))/p; }
+return l===0 ? 100 : 100-100/(1+g/l);
+}
+function linreg(y){
+const n=y.length; let sx=0,sy=0,sxy=0,sxx=0;
+for(let i=0;i<n;i++){ sx+=i; sy+=y[i]; sxy+=i*y[i]; sxx+=i*i; }
+const slope=(n*sxy-sx*sy)/(n*sxx-sx*sx), ic=(sy-slope*sx)/n, m=sy/n;
+let sst=0,sse=0; for(let i=0;i<n;i++){ sse+=(y[i]-(ic+slope*i))**2; sst+=(y[i]-m)**2; }
+return {slope, r2: sst ? 1-sse/sst : 0};
+}
+const NAMES = {
+reg:'انحدار خطي', struct:'هيكل القمم والقيعان', ema:'EMA 8/21', ma:'Moving Average (WMA 10)', sma:'SMA 10/30',
+sar:'Parabolic SAR', ichi:'Ichimoku Cloud', gator:'Alligator', st:'SuperTrend', adx:'ADX (+DI/−DI)', aroon:'Aroon', vortex:'Vortex',
+mom:'زخم 6 شموع', rsi:'RSI', stoch:'Stochastic', macd:'MACD', cci:'CCI', mom10:'Momentum 10', ao:'Awesome Oscillator',
+roc:'Rate of Change', wr:'Williams %R', dem:'DeMarker',
+boll:'Bollinger Bands', atr:'ATR (توسع التذبذب)', kelt:'Keltner Channel', donch:'Donchian Channel', env:'Envelopes',
+fractal:'Fractal', sr:'الدعم والمقاومة', fvg:'Fair Value Gap', candle:'الشموع الأخيرة', vol:'Volume (ضغط الحجم)', obv:'OBV', volx:'Volume (تمدد مع الاتجاه)'
+};
+const CATS = [
+{key:'trend', name:'الاتجاه', keys:['reg','struct','ema','ma','sma','sar','ichi','gator','st','adx','aroon','vortex']},
+{key:'mom', name:'الزخم والمذبذبات', keys:['mom','rsi','stoch','macd','cci','mom10','ao','roc','wr','dem']},
+{key:'volat', name:'التذبذب والقنوات', keys:['boll','atr','kelt','donch','env']},
+{key:'price', name:'حركة السعر', keys:['fractal','candle']},
+{key:'levels', name:'الدعم والمقاومة وFVG', keys:['sr','fvg']},
+{key:'volume', name:'الحجم', keys:['vol','obv','volx']}
+];
+const W0 = {reg:.06,struct:.03,ema:.04,ma:.03,sma:.03,sar:.04,ichi:.04,gator:.03,st:.04,adx:.04,aroon:.03,vortex:.03,
+mom:.03,rsi:.04,stoch:.03,macd:.04,cci:.03,mom10:.02,ao:.03,roc:.02,wr:.03,dem:.03,
+boll:.03,atr:.02,kelt:.03,donch:.03,env:.02, fractal:.03,candle:.09, sr:.05,fvg:.04};
+function weightsFor(mode){
+const volW = mode==='real' ? .20 : .06;
+const share = S.cciMode==='panel' ? S.cciShare : 0, shareR = S.rsiMode==='panel' ? S.rsiShare : 0;
+const W1 = {...W0}; if(share>0) delete W1.cci; if(shareR>0) delete W1.rsi;
+const tot = Object.values(W1).reduce((a,b)=>a+b,0), k = (1-volW-share-shareR)/tot, w = {};
+for(const key in W1) w[key] = W1[key]*k;
+if(share>0) w.cci = share;
+if(shareR>0) w.rsi = shareR;
+w.vol = volW*.4; w.obv = volW*.3; w.volx = volW*.3;
+return w;
+}
+const trOf = (c,pc) => Math.max(c.h-c.l, Math.abs(c.h-pc), Math.abs(c.l-pc));
+function wmaLast(a,p){ const x=a.slice(-p); let nu=0,de=0; x.forEach((v,i)=>{ nu+=v*(i+1); de+=i+1; }); return nu/de; }
+function smmaSeries(a,p){
+const out=[]; let prev=null;
+for(let i=0;i<a.length;i++){
+if(i<p-1){ out.push(null); continue; }
+prev = i===p-1 ? mean(a.slice(0,p)) : (prev*(p-1)+a[i])/p;
+out.push(prev);
+}
+return out;
+}
+function seriesAt(ser, idx){ const first = ser.findIndex(v=>v!=null); return first<0 ? 0 : ser[Math.max(idx, first)]; }
+function psar(w){
+let up = w[1].c>=w[0].c, af=.02, ep = up ? w[0].h : w[0].l, sar = up ? w[0].l : w[0].h, bars=0;
+for(let i=1;i<w.length;i++){
+sar = sar + af*(ep-sar);
+if(up){
+sar = Math.min(sar, w[i-1].l, i>1 ? w[i-2].l : w[i-1].l);
+if(w[i].l < sar){ up=false; sar=ep; ep=w[i].l; af=.02; bars=0; }
+else { if(w[i].h>ep){ ep=w[i].h; af=Math.min(af+.02,.2); } bars++; }
+} else {
+sar = Math.max(sar, w[i-1].h, i>1 ? w[i-2].h : w[i-1].h);
+if(w[i].h > sar){ up=true; sar=ep; ep=w[i].h; af=.02; bars=0; }
+else { if(w[i].l<ep){ ep=w[i].l; af=Math.min(af+.02,.2); } bars++; }
+}
+}
+return {up, bars};
+}
+function supertrend(w, p=10, m=3){
+let dir = w[1].c>=w[0].c ? 1 : -1, fu=null, fl=null, bars=0; const trs=[];
+for(let i=1;i<w.length;i++){
+trs.push(trOf(w[i], w[i-1].c));
+const a = mean(trs.slice(-p)), hl2=(w[i].h+w[i].l)/2, bu=hl2+m*a, bl=hl2-m*a;
+if(fu===null){ fu=bu; fl=bl; }
+else { fu = (bu<fu || w[i-1].c>fu) ? bu : fu; fl = (bl>fl || w[i-1].c<fl) ? bl : fl; }
+if(dir===1 && w[i].c<fl){ dir=-1; bars=0; } else if(dir===-1 && w[i].c>fu){ dir=1; bars=0; } else bars++;
+}
+return {dir, bars, line: dir===1 ? fl : fu};
+}
+function adxCalc(w, p){
+const pdm=[], mdm=[], tr=[];
+for(let i=1;i<w.length;i++){
+const up=w[i].h-w[i-1].h, dn=w[i-1].l-w[i].l;
+pdm.push(up>dn && up>0 ? up : 0); mdm.push(dn>up && dn>0 ? dn : 0); tr.push(trOf(w[i], w[i-1].c));
+}
+let sp=pdm.slice(0,p).reduce((a,b)=>a+b,0), sm=mdm.slice(0,p).reduce((a,b)=>a+b,0), st=tr.slice(0,p).reduce((a,b)=>a+b,0);
+const dx=[]; let pdi=0, mdi=0;
+for(let i=p-1;i<pdm.length;i++){
+if(i>p-1){ sp=sp-sp/p+pdm[i]; sm=sm-sm/p+mdm[i]; st=st-st/p+tr[i]; }
+pdi=100*sp/(st||1e-9); mdi=100*sm/(st||1e-9);
+dx.push(100*Math.abs(pdi-mdi)/((pdi+mdi)||1));
+}
+let adx = mean(dx.slice(0,p));
+for(let i=p;i<dx.length;i++) adx=(adx*(p-1)+dx[i])/p;
+return {pdi, mdi, adx};
+}
+function levelsInfo(w, A){
+const n=w.length, hs=w.map(c=>c.h), ls=w.map(c=>c.l), price=w[n-1].c, prev=w[n-2].c;
+const piv=[];
+for(let i=2;i<=n-3;i++){
+if(hs[i]>hs[i-1] && hs[i]>hs[i-2] && hs[i]>hs[i+1] && hs[i]>hs[i+2]) piv.push({p:hs[i],i});
+if(ls[i]<ls[i-1] && ls[i]<ls[i-2] && ls[i]<ls[i+1] && ls[i]<ls[i+2]) piv.push({p:ls[i],i});
+}
+const mxH=Math.max(...hs), mnL=Math.min(...ls), ih=hs.indexOf(mxH), il=ls.indexOf(mnL);
+if(!piv.some(q=>q.i===ih && q.p===mxH)) piv.push({p:mxH,i:ih});
+if(!piv.some(q=>q.i===il && q.p===mnL)) piv.push({p:mnL,i:il});
+piv.sort((a,b)=>a.p-b.p);
+const zs=[];
+for(const q of piv){
+const z=zs[zs.length-1];
+if(z && q.p-z.max<=.35*A && q.p-z.min<=.8*A){ z.pts.push(q); z.max=q.p; } else zs.push({pts:[q],min:q.p,max:q.p});
+}
+const zones = zs.map(z => ({p:mean(z.pts.map(q=>q.p)), lo:z.min, hi:z.max, touches:z.pts.length, first:Math.min(...z.pts.map(q=>q.i)), last:Math.max(...z.pts.map(q=>q.i))}));
+const sup = zones.filter(z=>z.p<=price).sort((a,b)=>b.p-a.p), res = zones.filter(z=>z.p>price).sort((a,b)=>a.p-b.p);
+const nearS = sup[0]||null, nearR = res[0]||null;
+const dS = nearS ? (price-nearS.p)/A : null, dR = nearR ? (nearR.p-price)/A : null;
+let bounce = 0;
+if(nearS && dS<.6) bounce += Math.min(1,(.6-dS)/.6)*Math.min(1,nearS.touches/3);
+if(nearR && dR<.6) bounce -= Math.min(1,(.6-dR)/.6)*Math.min(1,nearR.touches/3);
+let brk = 0;
+for(const z of zones){
+const t = Math.min(1, z.touches/2);
+if(prev<z.p && price>z.p && (price-z.p)/A<1) brk += .7*t;
+if(prev>z.p && price<z.p && (z.p-price)/A<1) brk -= .7*t;
+}
+const up3 = dR==null ? 3 : Math.min(3,dR), dn3 = dS==null ? 3 : Math.min(3,dS);
+const room = (up3-dn3)/(up3+dn3+1e-6);
+const sr = clamp(.55*bounce + clamp(brk,-1,1) + .35*room, -1, 1);
+const gaps=[];
+for(let i=2;i<n;i++){
+if(ls[i]>hs[i-2]){ if(ls[i]-hs[i-2]>=.15*A) gaps.push({dir:1, lo:hs[i-2], hi:ls[i], i}); }
+else if(hs[i]<ls[i-2]){ if(ls[i-2]-hs[i]>=.15*A) gaps.push({dir:-1, lo:hs[i], hi:ls[i-2], i}); }
+}
+gaps.forEach(g => {
+let fill=0;
+for(let j=g.i+1;j<n;j++) fill = Math.max(fill, clamp(g.dir>0 ? (g.hi-ls[j])/(g.hi-g.lo) : (hs[j]-g.lo)/(g.hi-g.lo), 0, 1));
+g.fill = fill;
+});
+const active = gaps.filter(g=>g.fill<.98);
+let fv=0;
+active.forEach(g => {
+const size=(g.hi-g.lo)/A, w8=Math.min(1,size/.8)*(1-g.fill)*Math.max(.4,1-(n-1-g.i)/25), inside = price>=g.lo && price<=g.hi;
+if(g.dir>0){ if(inside) fv+=.8*w8; else if(price>g.hi && (price-g.hi)/A<1.5) fv+=.3*w8; }
+else { if(inside) fv-=.8*w8; else if(price<g.lo && (g.lo-price)/A<1.5) fv-=.3*w8; }
+if(n-1-g.i<=4) fv += g.dir*.25*w8;
+});
+return {zones, nearS, nearR, dS, dR, gaps:active, sr, fvg:clamp(fv,-1,1)};
+}
+function score(w){
+const WEIGHTS = weightsFor(S.volMode);
+const n=w.length, cl=w.map(c=>c.c), hs=w.map(c=>c.h), ls=w.map(c=>c.l), med=w.map(c=>(c.h+c.l)/2);
+const A=Math.max(atr(w),1e-6), last=w[n-1], c0=cl[n-1];
+const trs = w.slice(1).map((c,i)=>trOf(c, w[i].c));
+const {slope,r2}=linreg(cl);
+const e8=ema(cl,8)[n-1], e21=ema(cl,21)[n-1];
+const k=Math.min(6,n-1);
+const m1=mean(cl.slice(-10)), m0=mean(cl.slice(-20,-10));
+const rsiP = w.every(c=>Number.isFinite(c.rsiv)) ? w.map(c=>c.rsiv) : null;
+const R = rsiP ? rsiP[n-1] : rsi(cl,Math.min(14,n-1));
+const bb=cl.slice(-Math.min(20,n)), sma20=mean(bb), sd=Math.sqrt(mean(bb.map(v=>(v-sma20)**2)))||1e-6;
+const z=(c0-sma20)/(2*sd);
+const rg=(last.h-last.l)||1e-6, lw=Math.min(last.o,last.c)-last.l, uw=last.h-Math.max(last.o,last.c);
+const body=c=>(c.c-c.o)/((c.h-c.l)||1e-6);
+const vs=w.map(c=>c.v||0), mv=mean(vs)||1;
+let num=0, den=0; for(const c of w.slice(-10)){ num+=(c.v||0)*body(c); den+=(c.v||0); }
+const pressure = den ? num/den : 0;
+const obvArr=[0]; for(let i=1;i<n;i++) obvArr.push(obvArr[i-1] + Math.sign(cl[i]-cl[i-1])*vs[i]);
+const rv = mean(vs.slice(-3))/mv;
+const volx = Math.tanh((rv-1)*1.5)*Math.tanh((cl[n-1]-cl[n-1-Math.min(3,n-1)])/(A*1.2));
+const wma = wmaLast(cl,10), wmaPrev = wmaLast(cl.slice(0,-3),10);
+const sma10 = mean(cl.slice(-10)), sma30 = mean(cl.slice(-Math.min(30,n)));
+const sr = psar(w), sar = (sr.up?1:-1)*(sr.bars<=1 ? 1 : .7);
+const stv = supertrend(w), st = stv.dir*(.6+.4*Math.min(1, Math.abs(c0-stv.line)/(2*A)));
+const pT=4, pK=10, shf=10, pB=Math.max(6,Math.min(20,n-shf));
+const mid=(i,p)=>{ const a=Math.max(0,i-p+1); return (Math.max(...hs.slice(a,i+1))+Math.min(...ls.slice(a,i+1)))/2; };
+const tenkan=mid(n-1,pT), kijun=mid(n-1,pK), jj=n-1-shf, spA=(mid(jj,pT)+mid(jj,pK))/2, spB=mid(jj,pB);
+const cTop=Math.max(spA,spB), cBot=Math.min(spA,spB);
+const ichi = clamp((tenkan>kijun?.3:-.3) + (c0>cTop?.7 : c0<cBot?-.7 : 0), -1, 1);
+const jaw=seriesAt(smmaSeries(med,13), n-1-8), teeth=seriesAt(smmaSeries(med,8), n-1-5), lips=seriesAt(smmaSeries(med,5), n-1-3);
+const sprd=Math.tanh((lips-jaw)/(A*1.5));
+const gator = (lips>teeth && teeth>jaw) || (lips<teeth && teeth<jaw) ? Math.sign(lips-jaw)*(.5+.5*Math.abs(sprd)) : sprd*.3;
+const ap=Math.max(5,Math.min(7+Math.floor((n-16)/2), 14)), ax=adxCalc(w, Math.min(14, Math.floor((n-1)/2)));
+const adx = Math.tanh((ax.pdi-ax.mdi)/15)*clamp(ax.adx/35,.2,1);
+const arp=Math.min(14,n-1), seg=w.slice(-(arp+1)); let ih=0, il=0;
+seg.forEach((c,i)=>{ if(c.h>=seg[ih].h) ih=i; if(c.l<=seg[il].l) il=i; });
+const aroon = (100*ih/arp - 100*il/arp)/100;
+const vp=Math.min(14,n-1); let vmp=0,vmm=0,vtr=0;
+for(let i=n-vp;i<n;i++){ vmp+=Math.abs(w[i].h-w[i-1].l); vmm+=Math.abs(w[i].l-w[i-1].h); vtr+=trOf(w[i],w[i-1].c); }
+const vortex = Math.tanh((vmp-vmm)/(vtr||1e-9)*3);
+const sp=Math.max(5,Math.min(14,n-5)), kRaw=[];
+for(let i=sp-1;i<n;i++){ const a=i-sp+1, hh=Math.max(...hs.slice(a,i+1)), ll=Math.min(...ls.slice(a,i+1)); kRaw.push((cl[i]-ll)/((hh-ll)||1e-6)*100); }
+const kS=[]; for(let i=2;i<kRaw.length;i++) kS.push(mean(kRaw.slice(i-2,i+1)));
+const dS=[]; for(let i=2;i<kS.length;i++) dS.push(mean(kS.slice(i-2,i+1)));
+const K=kS[kS.length-1], D=dS.length ? dS[dS.length-1] : K;
+const stoch = clamp(clamp((K-D)/20,-1,1)*.5 + (K<20 ? (20-K)/20*.5 : K>80 ? -(K-80)/20*.5 : 0), -1, 1);
+const e12=ema(cl,12), e26=ema(cl,26), macdS=e12.map((v,i)=>v-e26[i]), sigS=ema(macdS,9);
+const macdV=macdS[n-1], hist=macdV-sigS[n-1];
+const macd = .6*Math.tanh(hist/(A*.4)) + .4*Math.tanh(macdV/(A*1.2));
+const cp=Math.min(20,n), tp=w.slice(-cp).map(c=>(c.h+c.l+c.c)/3), tpm=mean(tp), md=mean(tp.map(v=>Math.abs(v-tpm)))||1e-6;
+const cciV=(tp[cp-1]-tpm)/(.015*md);
+const cciP = w.every(c=>Number.isFinite(c.cciv)) ? w.map(c=>c.cciv) : null;
+const cci = cciP ? cciSig(cciP) : (Math.abs(cciV)>200 ? -Math.sign(cciV)*.5 : clamp(cciV/150,-1,1)*.7);
+const k10=Math.min(10,n-1), mom10=Math.tanh((cl[n-1]-cl[n-1-k10])/(A*3));
+const aoAt=i=>{ const e=i+1; return mean(med.slice(Math.max(0,e-5),e)) - mean(med.slice(Math.max(0,e-Math.min(34,e)),e)); };
+const aoV=aoAt(n-1), aoPrev=aoAt(n-3);
+const ao = clamp(.7*Math.tanh(aoV/(A*1.5)) + .3*Math.tanh((aoV-aoPrev)/(A*.6)), -1, 1);
+const rk=Math.min(9,n-5), roc=cl[n-1]-cl[n-1-rk], rocPrev=cl[n-4]-cl[n-4-rk];
+const rocS = clamp(.6*Math.tanh(roc/(A*3)) + .4*Math.tanh((roc-rocPrev)/(A*1.5)), -1, 1);
+const wp=Math.min(14,n), wh=Math.max(...hs.slice(-wp)), wl=Math.min(...ls.slice(-wp)), wpct=(c0-wl)/((wh-wl)||1e-6);
+const wr = wpct<.2 ? (.2-wpct)/.2 : wpct>.8 ? -(wpct-.8)/.2 : (wpct-.5)*.4;
+const dp=Math.min(14,n-1); let dmx=0, dmn=0;
+for(let i=n-dp;i<n;i++){ dmx+=Math.max(w[i].h-w[i-1].h,0); dmn+=Math.max(w[i-1].l-w[i].l,0); }
+const demV = dmx/((dmx+dmn)||1e-9);
+const dem = demV<.3 ? (.3-demV)/.3 : demV>.7 ? -(demV-.7)/.3 : (demV-.5)*.6;
+const atr5=mean(trs.slice(-5)), atrRatio=atr5/A, mv6=cl[n-1]-cl[n-1-k];
+const atrS = Math.tanh(mv6/(A*2.5))*Math.tanh(Math.max(0,atrRatio-.9)*2.5);
+const e20=ema(cl,20)[n-1], at10=Math.max(atr(w,10),1e-6), kz=(c0-e20)/(2*at10), kelt=clamp(kz*.9,-1,1);
+const dp2=Math.min(20,n), dh=Math.max(...hs.slice(-dp2,-1)), dl=Math.min(...ls.slice(-dp2,-1));
+const donch = c0>dh ? 1 : c0<dl ? -1 : ((c0-dl)/((dh-dl)||1e-6)-.5);
+const ed=(c0-sma20)/(1.2*A);
+const env = ed>1 ? -Math.min(1,ed-1)*.8 : ed<-1 ? Math.min(1,-ed-1)*.8 : ed*.3;
+let upF=null, dnF=null;
+for(let i=2;i<=n-3;i++){
+if(hs[i]>hs[i-1] && hs[i]>hs[i-2] && hs[i]>hs[i+1] && hs[i]>hs[i+2]) upF=hs[i];
+if(ls[i]<ls[i-1] && ls[i]<ls[i-2] && ls[i]<ls[i+1] && ls[i]<ls[i+2]) dnF=ls[i];
+}
+const fractal = upF!=null && c0>upF ? .8 : dnF!=null && c0<dnF ? -.8 : (upF!=null && dnF!=null ? ((c0-dnF)/((upF-dnF)||1e-6)-.5)*.6 : 0);
+const lvl = levelsInfo(w, A);
+const f={
+reg: Math.tanh(slope*(n-1)/(A*5))*(.5+.5*r2),
+struct: Math.tanh((m1-m0)/(A*2.5)),
+ema: Math.tanh((e8-e21)/(A*1.2)),
+ma: .6*Math.tanh((c0-wma)/(A*1.2)) + .4*Math.tanh((wma-wmaPrev)/(A*.8)),
+sma: Math.tanh((sma10-sma30)/(A*1.2)),
+sar, ichi, gator, st, adx, aroon, vortex,
+mom: Math.tanh((cl[n-1]-cl[n-1-k])/(A*2.5)),
+rsi: rsiP ? rsiSig(rsiP) : (R<30 ? (30-R)/30 : R>70 ? -(R-70)/30 : (R-50)/120),
+stoch, macd, cci, mom10, ao, roc:rocS, wr, dem,
+boll: Math.abs(z)>.85 ? -Math.sign(z)*Math.min(1,(Math.abs(z)-.85)/.65)*.8 : 0,
+atr:atrS, kelt, donch, env,
+fractal, sr: lvl.sr, fvg: lvl.fvg,
+candle: clamp(.5*(lw-uw)/rg + .3*body(last) + .2*body(w[n-2]), -1, 1),
+vol: clamp(1.6*pressure, -1, 1),
+obv: Math.tanh(linreg(obvArr).slope*(n-1)/(mv*4)),
+volx
+};
+for(const key in f) if(!isFinite(f[key])) f[key]=0;
+f.reg = clamp(f.reg,-1,1);
+let sc=0; for(const key in f) sc+=WEIGHTS[key]*f[key];
+const dir = sc>0 ? 1 : -1;
+let agree=0, oppose=0;
+const cats = CATS.map(c => {
+const ws = c.keys.reduce((t,key)=>t+WEIGHTS[key],0);
+const value = c.keys.reduce((t,key)=>t+WEIGHTS[key]*f[key],0)/ws;
+if(Math.abs(value)>=.06){ if(Math.sign(value)===dir) agree+=ws; else oppose+=ws; }
+return {key:c.key, name:c.name, keys:c.keys, value, w:ws};
+});
+const all = Object.values(f);
+return {score:sc, f, cats, A, r2, R, rv, adx:ax.adx, levels:lvl,
+bull: all.filter(v=>v>.08).length, bear: all.filter(v=>v<-.08).length, total: all.length,
+agreement: agree/(agree+oppose+1e-9), strength: Math.min(1, Math.abs(sc)/.40)};
+}
+const sig = v => 1/(1+Math.exp(-v));
+function markov(list){
+let uu=0,ud=0,du=0,dd=0;
+for(let i=1;i<list.length;i++){
+const a=list[i-1], b=list[i]; if(a.c===a.o || b.c===b.o) continue;
+const bu = b.c>b.o;
+if(a.c>a.o){ if(bu) uu++; else ud++; } else { if(bu) du++; else dd++; }
+}
+return {pUU:(uu+3)/(uu+ud+6), pDU:(du+3)/(du+dd+6)};
+}
+function predictPath(w, hist, lastUp){
+const s = score(w), mk = markov(hist);
+const short = .6*s.f.candle + .4*s.f.boll;
+const path = []; let prevUp = lastUp;
+for(let k=1;k<=HZ;k++){
+const pm = prevUp ? mk.pUU : mk.pDU;
+const z = s.score*2.4*(1-.07*(k-1)) + short*1.2*Math.pow(.55,k-1) + .8*Math.log(pm/(1-pm));
+const p = sig(z), up = p>=.5;
+path.push({up,p}); prevUp = up;
+}
+return {path, s};
+}
+function analyze(){
+const all = S.candles;
+const base = S.skipLive ? all.slice(0,-1) : all.slice();
+if(base.length < 16) return null;
+const win = base.slice(-N);
+const cur = score(win);
+const dir = Math.abs(cur.score)<.03 ? 0 : (cur.score>0 ? 1 : -1);
+let n=0, hit=0;
+const acc = Array.from({length:HZ+1}, () => ({n:0,h:0}));
+for(let t=base.length-1-HZ; t>=15; t--){
+const w = base.slice(Math.max(0,t-N+1), t+1);
+const pp = predictPath(w, base.slice(0,t+1), base[t].c>=base[t].o);
+for(let k=1;k<=HZ;k++){
+const a = base[t+k]; if(a.c===a.o) continue;
+acc[k].n++; if(pp.path[k-1].up === (a.c>a.o)) acc[k].h++;
+}
+const sc = pp.s.score;
+if(Math.abs(sc)<.03) continue;
+const mv = base[t+HZ].c - base[t].c;
+if(mv===0) continue;
+n++; if((sc>0)===(mv>0)) hit++;
+}
+const signal = clamp(50 + 40*(((cur.agreement-.5)*2)*.55 + cur.strength*.45), 50, 90);
+let final = signal, histAdj = null;
+if(n>=12){
+histAdj = (hit+25)/(n+50)*100;            // انكماش نحو 50% حتى لا تخدعنا عينة صغيرة
+final = .55*signal + .45*histAdj;
+}
+final = Math.round(clamp(final, 50, 88));
+const grade = final>=70 ? 'قوية' : final>=60 ? 'متوسطة' : 'ضعيفة';
+const lastC = all[all.length-1];
+const pth = predictPath(win, base, lastC.c>=lastC.o).path;
+const colors = pth.map((c,i) => {
+const a = acc[i+1]; let pc = Math.max(c.p,1-c.p)*100;
+if(a.n>=12) pc = .5*pc + .5*((a.h+10)/(a.n+20)*100);
+return {up:c.up, conf:Math.round(clamp(pc,50,85)), n:a.n, h:a.h};
+});
+const cn = acc.reduce((t,a)=>t+a.n,0), ch = acc.reduce((t,a)=>t+a.h,0);
+const nowP = lastC.c;
+const delta = dir * Math.abs(cur.score) * cur.A * Math.sqrt(HZ) * 1.1;
+const band = cur.A * Math.sqrt(HZ) * .9;
+return {...cur, dir, signal:Math.round(signal), final, grade, hit, n, histAdj, nowP, delta, band, colors, cn, ch, volMode:S.volMode, rv:cur.rv, used: win.length};
+}
+function clipRegion(){
+const r = {...S.region}, v = S.volRegion;
+if(v && v.y0 > r.y0+40 && v.y0 < r.y1) r.y1 = v.y0-2;
+return r;
+}
+function readVolumes(list, vr){
+const {W,data} = S, px = (x,y) => { const i=(Math.round(y)*W+Math.round(x))*4; return [data[i],data[i+1],data[i+2]]; };
+const y1 = Math.floor(vr.y1), y0 = Math.ceil(vr.y0), samp = [];
+for(let i=1;i<list.length;i++){ const gx=(list[i-1].x+list[i].x)/2; for(const f of [.15,.4,.7]) samp.push(px(gx, y0+(y1-y0)*f)); }
+if(!samp.length) return false;
+const med = ch => samp.map(p=>p[ch]).sort((a,b)=>a-b)[samp.length>>1];
+const bg = [med(0),med(1),med(2)];
+const dist = p => Math.abs(p[0]-bg[0])+Math.abs(p[1]-bg[1])+Math.abs(p[2]-bg[2]);
+let ok = 0;
+for(const c of list){
+let best = 0;
+for(let dx=-2; dx<=2; dx++){
+let h=0, miss=0;
+for(let y=y1; y>=y0; y--){
+if(dist(px(c.x+dx,y)) > 40){ h++; miss=0; } else if(++miss>2) break;
+}
+best = Math.max(best,h);
+}
+c.v = best; c.vy = y1-best+1; if(best>2) ok++;
+}
+return ok >= list.length*.6;
+}
+function run(){
+const reg = clipRegion();
+let r = extractRobust(reg);
+if(r.list.length < 16) r = extract(reg, 70);
+if(r.list.length < 16) { const r2 = extract(reg, 120); if(r2.list.length > r.list.length) r = r2; }
+S.candles = r.list; S.bw = r.bw; S.step = r.step;
+S.result = null;
+readAtr();
+readCci();
+readRsi();
+if(r.list.length < 16){
+hint('قرأتُ ' + r.list.length + ' شمعة فقط. حدّد منطقة الشارت يدويًا (الزر بالأعلى) بحيث تحتوي الشموع فقط.', true);
+renderResult(null); render(); return;
+}
+let volNote = ' الحجم: بديل (مدى الشمعة) لأنه لا توجد لوحة حجم محددة.';
+S.volMode = 'proxy';
+if(S.volRegion){
+if(readVolumes(r.list, S.volRegion)){ S.volMode = 'real'; volNote = ' الحجم: مقروء من اللقطة.'; }
+else volNote = ' تعذّرت قراءة أعمدة الحجم من المنطقة المحددة، استُخدم البديل (مدى الشمعة).';
+}
+if(S.volMode==='proxy') r.list.forEach(c => { c.v = Math.max(c.h-c.l, 1); c.vy = null; });
+const res = analyze();
+if(!res){ hint('عدد الشموع المكتملة غير كافٍ للتحليل.', true); renderResult(null); render(); return; }
+S.result = res;
+res.pers = persistence(res);
+res.atr = atrLayer(res);
+res.lvEff = levelsEffect();
+res.cciEff = cciEffect();
+res.strong = strongCheck(res);
+res.div = divergenceLayer(res);
+res.l5 = last5Layer(res);
+const live = S.skipLive ? ' (الأخيرة مستثناة لأنها لم تكتمل)' : '';
+hint('تمت قراءة ' + r.list.length + ' شمعة' + live + '.' + volNote + (S.cciInfo ? ' CCI: مقروء من اللوحة.' : ' CCI: محسوب من الشموع.') + (S.rsiInfo ? ' RSI: مقروء من اللوحة.' : ' RSI: محسوب من الشموع.'), res.used < N || (S.volRegion && S.volMode!=='real'));
+renderResult(res); render();
+}
+function priceAt(py){
+const [a,b] = S.calib;
+if(a.y==null || b.y==null || a.p==null || b.p==null || a.y===b.y) return null;
+return a.p + (py - a.y) * (b.p - a.p) / (b.y - a.y);
+}
+function decimals(){
+let d = 2;
+for(const c of S.calib){ const s = String(c.raw||''); const i = s.indexOf('.'); if(i>=0) d = Math.max(d, s.length-i-1); }
+return Math.min(d, 6);
+}
+function dirColor(d){ return d>0 ? '#86e89a' : d<0 ? '#ff7b66' : '#f4c15d'; }
+function render(){
+if(!S.base) return;
+const {W,H} = S, u = Math.max(1, W/540);
+ctx.setLineDash([]); ctx.clearRect(0,0,W,H); ctx.drawImage(S.base,0,0);
+if(S.region){
+const r = S.region; ctx.save();
+ctx.setLineDash([9*u,6*u]); ctx.lineWidth = 1.5*u; ctx.strokeStyle = 'rgba(244,193,93,.75)';
+ctx.strokeRect(r.x0, r.y0, r.x1-r.x0, r.y1-r.y0); ctx.restore();
+}
+if(S.boxes && S.candles.length){
+const n = S.candles.length, liveIdx = S.skipLive ? n-1 : -1;
+const usedFrom = Math.max(0, (S.skipLive ? n-1 : n) - N);
+S.candles.forEach((c,i) => {
+const used = i>=usedFrom && i!==liveIdx;
+ctx.lineWidth = (used?1.6:1)*u;
+ctx.setLineDash(i===liveIdx ? [4*u,3*u] : []);
+ctx.strokeStyle = i===liveIdx ? '#f4c15d' : used ? 'rgba(124,196,255,.95)' : 'rgba(143,176,166,.4)';
+ctx.strokeRect(c.x-S.bw/2-2*u, c.yh-2*u, S.bw+4*u, (c.yl-c.yh)+4*u);
+});
+ctx.setLineDash([]);
+}
+if(S.volRegion){
+const v = S.volRegion; ctx.save();
+ctx.setLineDash([9*u,6*u]); ctx.lineWidth = 1.5*u; ctx.strokeStyle = 'rgba(182,156,255,.85)';
+ctx.strokeRect(v.x0, v.y0, v.x1-v.x0, v.y1-v.y0); ctx.setLineDash([]);
+if(S.boxes && S.volMode==='real'){ ctx.strokeStyle='#b69cff'; ctx.lineWidth=2.2*u;
+S.candles.forEach(c => { if(c.vy==null) return; ctx.beginPath(); ctx.moveTo(c.x-S.bw/2,c.vy); ctx.lineTo(c.x+S.bw/2,c.vy); ctx.stroke(); }); }
+ctx.restore();
+}
+S.calib.forEach((c,i) => {
+if(c.y==null) return;
+ctx.save(); ctx.setLineDash([6*u,5*u]); ctx.strokeStyle='#7cc4ff'; ctx.lineWidth=1.4*u;
+ctx.beginPath(); ctx.moveTo(0,c.y); ctx.lineTo(W,c.y); ctx.stroke();
+ctx.setLineDash([]); ctx.fillStyle='#7cc4ff'; ctx.font = `600 ${13*u}px sans-serif`;
+ctx.fillText('معايرة '+(i+1), 8*u, c.y-5*u); ctx.restore();
+});
+const r = S.result;
+if(r && S.candles.length){
+const last = S.candles[S.candles.length-1], rec = S.candles.slice(-10);
+const avgB = Math.max(mean(rec.map(c=>Math.abs(c.yo-c.yc))), 4*u);
+const avgW = mean(rec.map(c=>Math.max(0,(c.yl-c.yh)-Math.abs(c.yo-c.yc))))/2;
+let py = last.yc;
+ctx.save();
+ctx.strokeStyle='rgba(143,176,166,.35)'; ctx.lineWidth=1*u; ctx.setLineDash([4*u,5*u]);
+ctx.beginPath(); ctx.moveTo(last.x+S.step*.5, 0); ctx.lineTo(last.x+S.step*.5, H); ctx.stroke(); ctx.setLineDash([]);
+r.colors.forEach((c,k) => {
+const x = last.x + (k+1)*S.step; if(x + S.bw/2 > W) return;
+const mag = avgB*(.55 + (c.conf-50)/35*.9);
+const yo = py, yc = c.up ? py-mag : py+mag; py = yc;
+const top = Math.min(yo,yc), bot = Math.max(yo,yc);
+const col = c.up ? '#86e89a' : '#ff7b66';
+ctx.globalAlpha = c.conf>=55 ? .62 : .3; ctx.fillStyle = col; ctx.strokeStyle = col;
+ctx.fillRect(x-S.bw/2, top, S.bw, Math.max(mag,2*u));
+ctx.lineWidth = 2*u; ctx.beginPath(); ctx.moveTo(x, top-avgW); ctx.lineTo(x, bot+avgW); ctx.stroke();
+ctx.globalAlpha = 1; ctx.font = `700 ${11*u}px sans-serif`; ctx.textAlign='center';
+const ty = Math.min(H-4*u, bot+avgW+14*u);
+ctx.fillStyle = 'rgba(9,26,23,.85)'; ctx.fillRect(x-14*u, ty-11*u, 28*u, 15*u);
+ctx.fillStyle = col; ctx.fillText(c.conf+'%', x, ty);
+});
+ctx.restore();
+}
+drawLevels(u);
+drawPers(u);
+drawAtr(u);
+drawCci(u);
+drawRsi(u);
+drawDiv(u);
+drawL5(u);
+}
+function renderResult(r){
+const box = $('#result');
+if(!r){
+box.innerHTML = '<div class="empty"><div>تعذّرت القراءة. حدّد منطقة الشارت يدويًا ثم أعد المحاولة.</div></div>';
+return;
+}
+const dirKey = r.dir>0 ? 'up' : r.dir<0 ? 'down' : 'flat';
+const word = r.dir>0 ? 'شراء' : r.dir<0 ? 'بيع' : 'محايد';
+const arrow = r.dir>0 ? '<path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/>' : r.dir<0 ? '<path d="M12 5v14M5.5 12.5 12 19l6.5-6.5"/>' : '<path d="M5 12h14"/>';
+const adv = r.final>=60 ? 'السعر المتوقع بعد 6 شموع (15 دقيقة)' : 'الإشارة ضعيفة، الأفضل عدم الدخول';
+const cciWarn = r.dir && S.cciMode==='panel' && r.dir*r.f.cci < -.35 ? ' — ⚠ CCI يعاكس الاتجاه المتوقع' : '';
+const circ = Math.PI*90, frac = (r.final-50)/40;   // المقياس من 50% إلى 90%
+let ticks=''; for(let i=1;i<10;i++){ const a=Math.PI*(1-i/10); const x1=100+78*Math.cos(a), y1=100-78*Math.sin(a), x2=100+98*Math.cos(a), y2=100-98*Math.sin(a); ticks+=`<line class="tick" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`; }
+const dec = decimals(), np = priceAt(-r.nowP), tp = priceAt(-(r.nowP + r.delta));
+const lo = priceAt(-(r.nowP + r.delta - r.band)), hi = priceAt(-(r.nowP + r.delta + r.band));
+const sgn = v => (v>0?'+':v<0?'−':'') + Math.abs(v/r.A).toFixed(2);
+const targetCells = (np!=null && tp!=null)
+? `<div class="cell"><small>السعر الحالي</small><b class="num">${np.toFixed(dec)}</b></div>
+<div class="cell"><small>الهدف المتوقع</small><b class="num" style="color:var(--dir)">${tp.toFixed(dec)}</b></div>
+<div class="cell wide"><small>النطاق المحتمل بعد 15 دقيقة</small><b class="num">${Math.min(lo,hi).toFixed(dec)} ← ${Math.max(lo,hi).toFixed(dec)}</b></div>`
+: `<div class="cell"><small>الحركة المتوقعة</small><b class="num" style="color:var(--dir)">${sgn(r.delta)} ATR</b></div>
+<div class="cell"><small>نطاق الشك (±)</small><b class="num">${(r.band/r.A).toFixed(2)} ATR</b></div>
+<div class="cell wide"><small>لعرض السعر كرقم، استخدم «معايرة السعر» أسفل الصورة</small></div>`;
+const segs = []; let cy = 0;
+r.colors.forEach(c => { const mag = 10 + (c.conf-50)/35*14; const y1 = c.up ? cy-mag : cy+mag; segs.push([cy,y1]); cy = y1; });
+const allY = segs.flat(), mn = Math.min(...allY), mx = Math.max(...allY), sc = Math.min(1, 62/Math.max(mx-mn,1));
+const cols = r.colors.map((c,i) => {
+const y0 = (segs[i][0]-mn)*sc+10, y1 = (segs[i][1]-mn)*sc+10;
+const top = Math.min(y0,y1), h = Math.abs(y1-y0);
+const col = c.up ? 'var(--up)' : 'var(--down)';
+return `<div class="cc${c.conf<55?' lo':''}"><div class="cd"><i class="wk" style="top:${top-5}px;height:${h+10}px;background:${col}"></i><i class="bd" style="top:${top}px;height:${Math.max(h,3)}px;background:${col}"></i></div><b class="num" style="color:${col}">${c.up?'صاعدة':'هابطة'}</b><span class="num">${c.conf}%</span></div>`;
+}).join('');
+const colorAcc = r.cn>=24 ? `${Math.round(r.ch/r.cn*100)}% (${r.ch}/${r.cn})` : 'عينة صغيرة';
+const barHtml = v => {
+const col = v>=0 ? 'var(--up)' : 'var(--down)', pos = v>=0 ? `inset-inline-start:50%;width:${Math.min(50,Math.abs(v)*50)}%` : `inset-inline-end:50%;width:${Math.min(50,Math.abs(v)*50)}%`;
+return `<div class="bar"><i style="${pos};background:${col}"></i></div>`;
+};
+const num = v => `<em class="num">${v>=0?'+':'−'}${Math.abs(v).toFixed(2)}</em>`;
+const votes = r.cats.map(c => `<details class="cat"><summary><span class="catbar">${c.name}</span>${barHtml(c.value)}${num(c.value)}</summary>
+<div class="votes">${c.keys.map(k => `<div class="vote"><span>${NAMES[k]}</span>${barHtml(r.f[k])}${num(r.f[k])}</div>`).join('')}</div></details>`).join('');
+const hist = r.n>=12 ? `<span class="num">${r.hit} / ${r.n}</span> (${Math.round(r.hit/r.n*100)}%)` : 'عينة صغيرة';
+box.innerHTML = `
+<div class="res" data-dir="${dirKey}">
+<div class="head">
+<div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${arrow}</svg></div>
+<div><p class="verdict">${word}</p><span class="grade">${r.strong && r.strong.strong ? (r.dir>0 ? 'شراء قوي ✔' : 'بيع قوي ✔') : 'إشارة ' + r.grade}</span></div>
+</div>
+<p class="sub">${adv}${cciWarn}</p>
+<div class="gaugebox">
+<svg class="gauge" viewBox="0 0 200 108" aria-hidden="true">
+<path class="track" d="M10 100 A90 90 0 0 1 190 100" fill="none" stroke-width="14" stroke-linecap="round"/>
+<path class="val" id="gval" d="M10 100 A90 90 0 0 1 190 100" fill="none" stroke-width="14" stroke-linecap="round" stroke-dasharray="0 ${circ.toFixed(1)}"/>
+${ticks}
+</svg>
+<div class="gnum num">${r.final}%</div>
+<div class="glab">نسبة الموثوقية</div>
+</div>
+<div class="target">${targetCells}</div>
+<h3>لون الشموع الستة القادمة</h3>
+<div class="colors">${cols}</div>
+<div class="cclab"><span>الشمعة 1 (الأقرب)</span><span>الشمعة 6</span></div>
+${dvHtml(r)}
+${l5Html(r)}
+${rsHtml(r)}
+${cvHtml(r)}
+${lvHtml(r)}
+${atrHtml(r)}
+${persHtml(r)}
+<h3>تصويت المؤشرات (${r.total}) — اضغط على كل مجموعة للتفاصيل</h3>
+<div>${votes}</div>
+<h3>تفاصيل الموثوقية</h3>
+<div class="facts">
+<div><span>قوة وتوافق المؤشرات</span><b class="num">${r.signal}%</b></div>
+<div><span>اختبار رجعي على الشارت</span><b>${hist}</b></div>
+<div><span>جودة الاتجاه R²</span><b class="num">${r.r2.toFixed(2)}</b></div>
+<div><span>RSI</span><b class="num">${r.R.toFixed(0)}</b></div>
+<div><span>مصدر الحجم</span><b>${r.volMode==='real' ? 'حقيقي من اللقطة' : 'بديل (مدى الشمعة)'}</b></div>
+<div><span>الحجم النسبي (آخر 3)</span><b class="num">${r.rv.toFixed(2)}×</b></div>
+<div><span>مصدر CCI</span><b>${S.cciInfo ? 'من اللوحة' : 'محسوب من الشموع'}</b></div>
+<div><span>مصدر RSI</span><b>${S.rsiInfo ? 'من اللوحة' : 'محسوب من الشموع'}</b></div>
+<div><span>مؤشرات صاعدة / هابطة</span><b class="num">${r.bull} / ${r.bear}</b></div>
+<div><span>قوة الاتجاه ADX</span><b class="num">${r.adx.toFixed(0)}</b></div>
+<div><span>دقة الألوان تاريخيًا</span><b class="num">${colorAcc}</b></div>
+</div>
+<p class="note">الموثوقية تقدير إحصائي من الشموع الظاهرة في اللقطة (توافق المؤشرات + نجاحها على نفس الشارت)، وليست ضمانًا لنتيجة الصفقة. أسعار OTC يولّدها الوسيط وقد لا تتبع منطق السوق الحقيقي.</p>
+</div>`;
+requestAnimationFrame(() => requestAnimationFrame(() => {
+const g = $('#gval'); if(g) g.setAttribute('stroke-dasharray', `${(clamp(frac,0,1)*circ).toFixed(1)} ${circ.toFixed(1)}`);
+}));
+}
+function persistence(res){
+const dir = res.dir; if(!dir) return null;
+const all = S.candles, base = S.skipLive ? all.slice(0,-1) : all.slice(), win = base.slice(-N);
+const A = res.A, m = S.fear, thr = m*A;
+const mv = win.slice(1).map((c,i) => ({dc:c.c-win[i].c, dh:c.h-win[i].c, dl:c.l-win[i].c}));
+const mdc = mean(mv.map(x=>x.dc)), drift = dir*Math.abs(res.score)*A*.35, shift = drift-mdc;
+let seed = 987654321; const rnd = () => { seed = (Math.imul(seed,1664525)+1013904223)>>>0; return seed/4294967296; };
+const T = 3000, worsts = []; let c3=0, c4=0;
+for(let t=0;t<T;t++){
+const seq = []; while(seq.length<PH){ const i = Math.floor(rnd()*(mv.length-1)); seq.push(mv[i], mv[i+1]); }
+let price=0, worst=0;
+for(let k=0;k<PH;k++){
+const q=seq[k], dc=q.dc+shift, dl=q.dl+shift, dh=q.dh+shift;
+const adv = dir>0 ? -(price+Math.min(dl,dc)) : (price+Math.max(dh,dc));
+worst = Math.max(worst, adv); price += dc;
+const ok = worst<=thr && dir*price>0;
+if(k===2 && ok) c3++; if(k===3 && ok) c4++;
+}
+worsts.push(worst/A);
+}
+const mc3=c3/T, mc4=c4/T; worsts.sort((a,b)=>a-b);
+let n=0, h3=0, h4=0;
+for(let t=base.length-1-PH; t>=15; t--){
+const w = base.slice(Math.max(0,t-N+1), t+1), sc = score(w).score;
+if(Math.abs(sc)<.03) continue;
+const d = sc>0?1:-1, At = Math.max(atr(w),1e-6), entry = base[t].c; let worst=0, ok3=false, ok4=false;
+for(let k=1;k<=PH;k++){
+const c = base[t+k], adv = d>0 ? entry-c.l : c.h-entry; worst = Math.max(worst, adv);
+const ok = worst<=m*At && d*(c.c-entry)>0; if(k===3) ok3=ok; if(k===4) ok4=ok;
+}
+n++; if(ok3) h3++; if(ok4) h4++;
+}
+const last10 = win.slice(-10);
+const wick = mean(last10.map(c => { const rg=(c.h-c.l)||1e-6; return (rg-Math.abs(c.c-c.o))/rg; }));
+const cols = win.slice(-20).map(c=>c.c>=c.o); let alt=0; for(let i=1;i<cols.length;i++) if(cols[i]!==cols[i-1]) alt++;
+alt /= (cols.length-1);
+const rgAvg = mean(win.map(c=>c.h-c.l)), spike = win.slice(-5).some(c => (c.h-c.l) > 2.3*rgAvg);
+let run=0; for(let i=base.length-1;i>=0;i--){ if((base[i].c>=base[i].o)===(dir>0)) run++; else break; }
+const sg = win.slice(-11).map(c=>c.c); let path=0; for(let i=1;i<sg.length;i++) path += Math.abs(sg[i]-sg[i-1]);
+const er = Math.abs(sg[sg.length-1]-sg[0])/(path||1e-6);
+const flags = [];
+if(wick>.62) flags.push(`ذيول طويلة (${Math.round(wick*100)}% من المدى) — حركة متقطعة`);
+if(alt>.6) flags.push(`تناوب ألوان مرتفع (${Math.round(alt*100)}%)`);
+if(spike) flags.push('شمعة طفرة حديثة (مدى أكبر من 2.3× المتوسط) — قد يعود السعر');
+if(run>=5) flags.push(`${run} شموع متتالية بنفس الاتجاه — إجهاد وقد يرتد`);
+if(er<.25) flags.push(`كفاءة الحركة منخفضة (${er.toFixed(2)}) — ضوضاء أكثر من اتجاه`);
+const L = res.levels;
+if(L){
+const dA = dir>0 ? L.dR : L.dS;
+if(dA!=null && dA<1) flags.push(`${dir>0?'مقاومة':'دعم'} قريب أمام الاتجاه (${dA.toFixed(2)} ATR) قد يعيق الاستمرار`);
+if(L.gaps.some(g => g.dir===-dir && (dir>0 ? (g.lo>res.nowP-0 && (g.lo-res.nowP)/res.A<1.2) : (g.hi<res.nowP && (res.nowP-g.hi)/res.A<1.2)))) flags.push('فجوة FVG معاكسة قريبة أمام الاتجاه');
+}
+const penalty = S.otc ? Math.min(.30, flags.length*.07) : Math.min(.15, flags.length*.035);
+const fin = (mc,h) => { const p = n>=8 ? (h+20*mc)/(n+20) : mc; return clamp(p*(1-penalty), .05, .78); };
+const p3 = Math.round(fin(mc3,h3)*100), p4 = Math.round(fin(mc4,h4)*100);
+const avg = (p3+p4)/2;
+return {p3, p4, mc3:Math.round(mc3*100), mc4:Math.round(mc4*100), h3, h4, n, thr, flags, penalty,
+medAdv: worsts[T>>1], p80Adv: worsts[Math.floor(T*.8)],
+runSame: res.colors.slice(0,4).filter(c => c.up===(dir>0)).length,
+level: avg>=62 ? 'good' : avg>=48 ? 'mid' : 'bad'};
+}
+function drawPers(u){
+const r = S.result; if(!r || !r.pers || !r.dir || !S.candles.length) return;
+const P = r.pers, last = S.candles[S.candles.length-1];
+const y0 = last.yc, yT = y0 + r.dir*P.thr, x0 = last.x, x1 = Math.min(S.W-6*u, last.x + (PH+.5)*S.step);
+ctx.save();
+ctx.globalAlpha = .1; ctx.fillStyle = '#f4c15d'; ctx.fillRect(x0, Math.min(y0,yT), x1-x0, Math.abs(yT-y0));
+ctx.globalAlpha = 1; ctx.strokeStyle = '#f4c15d'; ctx.lineWidth = 1.8*u; ctx.setLineDash([7*u,5*u]);
+ctx.beginPath(); ctx.moveTo(x0, yT); ctx.lineTo(x1, yT); ctx.stroke();
+ctx.setLineDash([]); ctx.font = `700 ${11*u}px sans-serif`; ctx.textAlign = 'right'; ctx.fillStyle = '#f4c15d';
+ctx.fillText('حد الخوف', x1, yT + (r.dir>0 ? 13*u : -5*u));
+ctx.restore();
+}
+function persHtml(r){
+const P = r.pers;
+if(!P) return '<h3>استمرار الاتجاه 3–4 شموع</h3><p class="sub">لا يوجد اتجاه واضح لتقييم الاستمرارية.</p>';
+const lv = p => p>=62 ? 'good' : p>=48 ? 'mid' : 'bad';
+const word = {good:'استمرارية جيدة — احتمال ضغط على الصفقة أقل', mid:'استمرارية متوسطة — قد يظهر ضغط مؤقت', bad:'استمرارية ضعيفة — احتمال كبير أن يضغط السعر على الصفقة'}[P.level];
+const hist = P.n>=8 ? `${P.h3}/${P.n} · ${P.h4}/${P.n}` : 'عينة صغيرة';
+const fl = P.flags.length ? `<ul>${P.flags.map(f=>`<li>${f}</li>`).join('')}</ul>` : '<ul><li>لا تنبيهات OTC ظاهرة في الشموع الأخيرة</li></ul>';
+return `<h3>استمرار الاتجاه 3–4 شموع بدون ضغط على الصفقة</h3>
+<div class="pers">
+<div class="two">
+<div class="pc"><small>3 شموع</small><b class="num ${lv(P.p3)}">${P.p3}%</b></div>
+<div class="pc"><small>4 شموع</small><b class="num ${lv(P.p4)}">${P.p4}%</b></div>
+</div>
+<p class="verdict2 ${P.level}">${word}</p>
+<div class="mini">
+<div><span>حد الخوف (ضد الصفقة)</span><b class="num">${S.fear} ATR</b></div>
+<div><span>تراجع محتمل (80%)</span><b class="num">≤ ${P.p80Adv.toFixed(2)} ATR</b></div>
+<div><span>شموع متوقعة بنفس الاتجاه (من 4)</span><b class="num">${P.runSame}</b></div>
+<div><span>اختبار رجعي (3 · 4)</span><b class="num">${hist}</b></div>
+<div><span>محاكاة بدون خصم (3 · 4)</span><b class="num">${P.mc3}% · ${P.mc4}%</b></div>
+<div><span>خصم عيوب ${S.otc?'OTC':'السوق'}</span><b class="num">−${Math.round(P.penalty*100)}%</b></div>
+</div>
+<h3 style="margin:14px 0 4px">تنبيهات ${S.otc?'OTC':'الحركة'}</h3>${fl}
+<p class="why">النسبة تعني: احتمال أن يمضي السعر مع الاتجاه حتى الشمعة 3 أو 4 دون أن يتجاوز حد الخوف ضد الصفقة (ويُرسم على الصورة كخط أصفر). مصدرها محاكاة من حركة هذا الشارت نفسه + اختبار رجعي، وسقفها 78% عمدًا.</p>
+</div>`;
+}
+function extractRobust(r){
+const mS = mask(26), mL = mask(70), W = S.W;
+const x0=Math.round(r.x0), x1=Math.round(r.x1), y0=Math.round(r.y0), y1=Math.round(r.y1);
+const has = new Uint8Array(x1-x0+2);
+for(let x=x0;x<=x1;x++) for(let y=y0;y<=y1;y++) if(mS[y*W+x]){ has[x-x0]=1; break; }
+const cl = []; let x = x0;
+while(x<=x1){
+if(has[x-x0]){
+let s=x,e=x;
+while(x<=x1 && (has[x-x0] || has[x+1-x0])){ if(has[x-x0]) e=x; x++; }
+cl.push([s,e]);
+} else x++;
+}
+const widths = cl.map(c=>c[1]-c[0]+1).filter(w=>w>=5).sort((a,b)=>a-b);
+if(!widths.length) return {list:[],bw:12,step:17};
+const bw = widths[Math.floor(widths.length/2)], list = [];
+for(const [s,e] of cl){
+const w = e-s+1; if(w < bw*.6 || w > bw*1.6) continue;
+let g=0,rd=0,hi=1e9,lo=-1,bT=1e9,bB=-1,maxC=0,maxY=0;
+for(let y=y0;y<=y1;y++){
+let c=0;
+for(let xx=s;xx<=e;xx++){ const v=mS[y*W+xx]; if(v){ c++; if(v===1) g++; else rd++; } }
+if(c){ if(y<hi) hi=y; lo=y; if(c>maxC){maxC=c;maxY=y;} }
+if(c >= bw*.5){ if(y<bT) bT=y; bB=y; }
+}
+if(lo<0) continue;
+if(bB<0){ bT=bB=maxY; }
+const xc = Math.round((s+e)/2);
+let y=hi-1, gap=0; while(y>=y0 && gap<=2){ if(mL[y*W+xc-1]||mL[y*W+xc]||mL[y*W+xc+1]){ hi=y; gap=0; } else gap++; y--; }
+y=lo+1; gap=0; while(y<=y1 && gap<=2){ if(mL[y*W+xc-1]||mL[y*W+xc]||mL[y*W+xc+1]){ lo=y; gap=0; } else gap++; y++; }
+if(lo-hi<1) continue;
+const up = g >= rd, openY = up ? bB+1 : bT, closeY = up ? bT : bB+1;
+list.push({x:(s+e)/2, up, yh:hi, yl:lo+1, yo:openY, yc:closeY, o:-openY, c:-closeY, h:-hi, l:-(lo+1)});
+}
+if(list.length<2) return {list, bw:bw+3, step:(bw+3)*1.45};
+const diffs = []; for(let i=1;i<list.length;i++) diffs.push(list[i].x-list[i-1].x);
+const step = diffs.slice().sort((a,b)=>a-b)[Math.floor(diffs.length/2)];
+const chain = [list[list.length-1]];
+for(let i=list.length-2;i>=0;i--){ if(chain[0].x - list[i].x > step*2.6) break; chain.unshift(list[i]); }
+return {list:chain, bw:bw+3, step};
+}
+const ATR_TF = new Set([...CATS[0].keys, 'mom','mom10','macd','ao','roc']);   // مؤشرات تتبّع الاتجاه: تقوى عند ارتفاع ATR
+const ATR_RV = new Set(['rsi','stoch','cci','wr','dem','boll','env']);          // مؤشرات الارتداد: تقوى عند انخفاض ATR
+function atrSeriesFromCandles(list, p){
+const out = [], trs = [];
+list.forEach((c,i) => { trs.push(i ? trOf(c, list[i-1].c) : c.h-c.l); out.push(mean(trs.slice(-p))); });
+return out;
+}
+function atrWilder(list, p){
+const trs = list.map((c,i) => i ? trOf(c, list[i-1].c) : c.h-c.l), out = [];
+let prev = mean(trs.slice(0,p));
+for(let i=0;i<trs.length;i++){ if(i<p) out.push(mean(trs.slice(0,i+1))); else { prev = (prev*(p-1)+trs[i])/p; out.push(prev); } }
+return out;
+}
+function pearson(a,b){
+const n=a.length; if(n<4) return 0;
+const ma=mean(a), mb=mean(b); let sab=0,saa=0,sbb=0;
+for(let i=0;i<n;i++){ sab+=(a[i]-ma)*(b[i]-mb); saa+=(a[i]-ma)**2; sbb+=(b[i]-mb)**2; }
+return sab/Math.sqrt((saa*sbb)||1e-9);
+}
+function isBlue(x,y){ const i=(y*S.W+x)*4, d=S.data; return d[i+2]>150 && d[i+2]>d[i]+90 && d[i+2]>d[i+1]+40; }
+function detectAtrPanel(){
+const {W,H} = S, yA = Math.floor((S.region ? S.region.y1 : H*.7)+10), yB = Math.floor(H*.9), xB = Math.floor(W*.86);
+let mn=1e9, mx=-1, cnt=0;
+for(let y=yA;y<yB;y++) for(let x=0;x<xB;x++) if(isBlue(x,y)){ cnt++; if(y<mn) mn=y; if(y>mx) mx=y; }
+return cnt<120 ? null : {x0:0, y0:mn-6, x1:xB, y1:mx+6};
+}
+function readAtr(){
+if(S.atrBase!==S.base){ S.atrBase = S.base; S.atrRegion = null; $('#btnAtrClear').hidden = true; }
+S.atrInfo = null; const L = S.candles; if(L.length<16) return;
+const panel = S.atrRegion || detectAtrPanel();
+let ys = null, found = 0;
+if(panel){
+ys = L.map(c => {
+const xs = Math.round(c.x), arr = [];
+for(let x=xs-1;x<=xs+1;x++) for(let y=Math.ceil(panel.y0);y<=Math.floor(panel.y1);y++) if(isBlue(x,y)) arr.push(y);
+if(!arr.length) return null; arr.sort((a,b)=>a-b); found++; return arr[arr.length>>1];
+});
+}
+if(ys && found >= .6*L.length){
+for(let i=0;i<ys.length;i++) if(ys[i]==null){
+let a=i-1; while(a>=0 && ys[a]==null) a--; let b=i+1; while(b<ys.length && ys[b]==null) b++;
+ys[i] = a>=0 && b<ys.length ? ys[a]+(ys[b]-ys[a])*(i-a)/(b-a) : a>=0 ? ys[a] : ys[b];
+}
+L.forEach((c,i) => { c.atry = ys[i]; c.atrv = -ys[i]; });
+let best = {p:14, r:-2, kind:'SMA'};
+const lsAll = L.map(c=>c.atrv);
+for(const p of [5,7,9,10,12,14,20]){
+const sm = atrSeriesFromCandles(L,p), wl = atrWilder(L,p);
+for(const [kind,cs] of [['SMA',sm],['Wilder',wl]]){
+const r = pearson(cs.slice(p), lsAll.slice(p));
+if(r>best.r) best = {p, r, kind};
+}
+}
+S.atrInfo = {src:'line', period:best.p, kind:best.kind, r:best.r, panel, found, total:L.length};
+} else {
+const cs = atrSeriesFromCandles(L,14); L.forEach((c,i) => { c.atrv = cs[i]; c.atry = null; });
+S.atrInfo = {src:'computed', period:14, r:1, panel:null, found, total:L.length, missed:!!panel};
+}
+}
+function scenScore(f, A, move3, reg, WEIGHTS){
+let sw=0, sc=0; const wm = {};
+for(const k in f){
+const m = ATR_TF.has(k) ? (reg>0 ? 1.3 : .8) : ATR_RV.has(k) ? (reg>0 ? .75 : 1.3) : 1;
+wm[k] = WEIGHTS[k]*m; sw += wm[k]; sc += wm[k]*f[k];
+}
+sc = clamp(sc/sw + .15*reg*Math.tanh(move3/(A*1.5)), -1, 1);
+const dir = sc>0 ? 1 : -1; let agree=0, opp=0;
+CATS.forEach(c => {
+const ws = c.keys.reduce((t,k)=>t+wm[k],0), val = c.keys.reduce((t,k)=>t+wm[k]*f[k],0)/ws;
+if(Math.abs(val)>=.06){ if(Math.sign(val)===dir) agree+=ws; else opp+=ws; }
+});
+return {sc, agreement: agree/(agree+opp+1e-9)};
+}
+function atrLayer(res){
+const I = S.atrInfo; if(!I) return null;
+const all = S.candles, n = all.length; if(n<18) return null;
+const base = S.skipLive ? all.slice(0,-1) : all.slice(), win = base.slice(-N);
+const wv = win.map(c=>c.atrv), liveV = all[n-1].atrv;
+const vals = S.skipLive ? wv.concat([liveV]) : wv.slice();
+const mn = Math.min(...vals), mx = Math.max(...vals), rg = (mx-mn)||1, lv = v => (v-mn)/rg;
+const nowRegime = all[n-1].atrv > all[n-2].atrv ? 1 : -1;
+const WEIGHTS = weightsFor(S.volMode);
+const up = {'1':0,'-1':0}, cnt = {'1':0,'-1':0}, hit = {'1':0,'-1':0}, hn = {'1':0,'-1':0};
+for(let t=base.length-1-HZ; t>=15; t--){
+const w = base.slice(Math.max(0,t-N+1), t+1), rr = score(w), reg = base[t].atrv>base[t-1].atrv ? 1 : -1;
+const mvA = base[t+HZ].c - base[t].c; if(mvA===0) continue;
+cnt[reg]++; if(mvA>0) up[reg]++;
+const sc = scenScore(rr.f, rr.A, base[t].c-base[t-3].c, reg, WEIGHTS).sc;
+if(Math.abs(sc)<.03) continue;
+hn[reg]++; if((sc>0)===(mvA>0)) hit[reg]++;
+}
+const move3 = base[base.length-1].c - base[base.length-4].c;
+const mk = reg => {
+const ss = scenScore(res.f, res.A, move3, reg, WEIGHTS); let sc = ss.sc;
+const pUp = (up[reg]+3)/(cnt[reg]+6);
+if(cnt[reg]>=6) sc = .75*sc + .25*(pUp-.5)*2;
+const dir = Math.abs(sc)<.03 ? 0 : (sc>0 ? 1 : -1), strength = Math.min(1, Math.abs(sc)/.40);
+const signal = clamp(50 + 40*((ss.agreement-.5)*2*.55 + strength*.45), 50, 90);
+let conf = signal;
+if(hn[reg]>=8) conf = .55*signal + .45*((hit[reg]+25)/(hn[reg]+50)*100);
+return {dir, conf:Math.round(clamp(conf,50,85)), sc, n:hn[reg], h:hit[reg], pUp:Math.round(pUp*100), cnt:cnt[reg]};
+};
+const U = mk(1), D = mk(-1), act = nowRegime>0 ? U : D;
+return {nowRegime, up:U, down:D, same: U.dir===D.dir && U.dir!==0, act,
+dirC: U.dir===D.dir ? U.dir : act.dir, confC: Math.min(U.conf, D.conf),
+lvNow: lv(liveV), lvPrev: lv(all[n-2].atrv), lvWin: wv.map(lv), lvLive: lv(liveV), info: I};
+}
+function drawAtr(u){
+const I = S.atrInfo; if(!I || I.src!=='line') return;
+ctx.save();
+if(I.panel){ ctx.setLineDash([9*u,6*u]); ctx.lineWidth = 1.5*u; ctx.strokeStyle = 'rgba(124,196,255,.8)'; ctx.strokeRect(I.panel.x0, I.panel.y0, I.panel.x1-I.panel.x0, I.panel.y1-I.panel.y0); ctx.setLineDash([]); }
+if(S.boxes){
+S.candles.forEach((c,i) => {
+if(c.atry==null) return;
+const live = S.skipLive && i===S.candles.length-1;
+ctx.beginPath(); ctx.arc(c.x, c.atry, 4*u, 0, 7); ctx.fillStyle = live ? '#f4c15d' : '#7cc4ff'; ctx.fill();
+ctx.lineWidth = 1.2*u; ctx.strokeStyle = '#06120f'; ctx.stroke();
+});
+}
+ctx.restore();
+}
+function atrHtml(r){
+const A = r.atr; if(!A) return '';
+const I = A.info, word = d => d>0 ? 'صعود' : d<0 ? 'هبوط' : 'محايد', cls = d => d>0 ? 'up' : d<0 ? 'down' : 'flat';
+const card = (title, sc, active) => `<div class="scen${active?' active':''}" data-dir="${cls(sc.dir)}">${active?'<span class="now">الحالة الآن</span>':''}<small>${title}</small><b class="sw">${word(sc.dir)}</b><span class="num">${sc.conf}%</span><em class="num">${sc.n>=8 ? `تاريخيًا ${sc.h}/${sc.n}` : 'عينة صغيرة'}</em></div>`;
+const src = I.src==='line'
+? `تم التعرف على الخط الأزرق كمؤشر ATR وقراءته عند <b class="num">${I.found}/${I.total}</b> شمعة. أقرب فترة: <b class="num">ATR(${I.period}) ${I.kind||'SMA'}</b>، تطابقه مع ATR المحسوب من الشموع <b class="num">r = ${I.r.toFixed(2)}</b>${I.r<.6 ? ' — ضعيف، تأكد أن المؤشر هو ATR' : ''}.`
+: `${I.missed ? 'تعذّرت قراءة الخط الأزرق من المنطقة المحددة. ' : 'لا يوجد خط ATR في اللقطة. '}استُخدم <b>ATR(14) المحسوب من الشموع</b> بدلًا منه.`;
+const dNow = Math.round((A.lvNow-A.lvPrev)*100);
+const state = `ATR الشمعة الحالية <b>${A.nowRegime>0?'أعلى ↑':'أقل ↓'}</b> من السابقة (<span class="num">${dNow>0?'+':''}${dNow}%</span> من مدى النافذة). خط الحسم: مستوى ATR السابق = <span class="num">${Math.round(A.lvPrev*100)}%</span>.`;
+const dec = A.same
+? `القرار لا يتغير مهما كان ATR: <span style="color:var(--${A.dirC>0?'up':'down'})">${word(A.dirC)}</span> (${A.confC}%)`
+: `القرار يتوقف على إغلاق الشمعة الحالية. الآن (مؤقتًا): <span style="color:var(--${A.act.dir>0?'up':A.act.dir<0?'down':'amber'})">${word(A.act.dir)}</span> (${A.act.conf}%)`;
+const pts = A.lvWin.concat([A.lvLive]), W=300, H=70, st = W/(pts.length-1);
+const xy = pts.map((v,i)=>`${(i*st).toFixed(1)},${(H-8-v*(H-16)).toFixed(1)}`);
+const yPrev = (H-8-A.lvPrev*(H-16)).toFixed(1);
+const lastp = xy[xy.length-1].split(',');
+const spark = `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><line x1="0" x2="${W}" y1="${yPrev}" y2="${yPrev}" stroke="#4f7f73" stroke-dasharray="4 4"/><polyline fill="none" stroke="#7cc4ff" stroke-width="2" points="${xy.slice(0,-1).join(' ')}"/><polyline fill="none" stroke="#f4c15d" stroke-width="2" stroke-dasharray="3 3" points="${xy.slice(-2).join(' ')}"/><circle cx="${lastp[0]}" cy="${lastp[1]}" r="4" fill="#f4c15d"/></svg>`;
+const chips = A.lvWin.map((v,i)=>`<span class="num"><i>${i+1}·</i>${Math.round(v*100)}</span>`).join('');
+return `<h3>ATR: مخرجان حسب إغلاق الشمعة الحالية</h3>
+<div class="atrbox">
+<p class="src">${src}</p>
+<div class="scens">
+${card('إذا أُغلقت بـ ATR أعلى من السابقة', A.up, A.nowRegime>0)}
+${card('إذا أُغلقت بـ ATR أقل من السابقة', A.down, A.nowRegime<0)}
+</div>
+<p class="dec">${dec}</p>
+<p class="src" style="margin:8px 0 0">${state}</p>
+${spark}
+<details class="atrd"><summary>مستوى ATR لكل شمعة من الـ30 (0 = الأدنى، 100 = الأعلى في النافذة)</summary><div class="chips">${chips}</div></details>
+<p class="src" style="margin:10px 0 0">كيف يُستخدم: عند ارتفاع ATR تقوى مؤشرات الاتجاه والزخم، وعند انخفاضه تقوى مؤشرات الارتداد، ثم يُدمج ذلك مع سلوك هذا الشارت تاريخيًا في كل حالة. المستويات نسبية داخل النافذة وليست قيم ATR الحقيقية.</p>
+</div>`;
+}
+function levelsEffect(){
+const all = S.candles, base = S.skipLive ? all.slice(0,-1) : all.slice(), W = weightsFor(S.volMode);
+const skip = new Set(['sr','fvg']);
+const den0 = Object.keys(W).filter(k=>!skip.has(k)).reduce((t,k)=>t+W[k],0);
+let n=0, h1=0, h0=0;
+for(let t=base.length-1-HZ; t>=15; t--){
+const rr = score(base.slice(Math.max(0,t-N+1), t+1)), sc1 = rr.score;
+const sc0 = Object.keys(rr.f).filter(k=>!skip.has(k)).reduce((a,k)=>a+W[k]*rr.f[k],0)/den0;
+const mv = base[t+HZ].c - base[t].c;
+if(mv===0 || Math.abs(sc1)<.03 || Math.abs(sc0)<.03) continue;
+n++; if((sc1>0)===(mv>0)) h1++; if((sc0>0)===(mv>0)) h0++;
+}
+return {n, h1, h0};
+}
+function drawLevels(u){
+const r = S.result; if(!r || !r.levels || !S.candles.length) return;
+const L = r.levels, n = S.candles.length, off = (n-(S.skipLive?1:0)) - r.used, last = S.candles[n-1], now = last.c;
+const xEnd = Math.min(S.W-6*u, last.x + (PH+2)*S.step);
+const sup = L.zones.filter(z=>z.p<=now).sort((a,b)=>b.p-a.p), res = L.zones.filter(z=>z.p>now).sort((a,b)=>a.p-b.p);
+const pick = new Set([...sup.slice(0,2), ...res.slice(0,2), ...L.zones.filter(z=>z.touches>=3)]);
+ctx.save(); ctx.font = `700 ${10*u}px sans-serif`; ctx.textAlign = 'right';
+L.gaps.forEach(g => {
+const c0 = S.candles[off+g.i-2]; if(!c0) return;
+const col = g.dir>0 ? '134,232,154' : '255,123,102', yT = -g.hi, yB = -g.lo;
+ctx.fillStyle = `rgba(${col},.15)`; ctx.fillRect(c0.x, yT, xEnd-c0.x, yB-yT);
+ctx.setLineDash([5*u,4*u]); ctx.lineWidth = 1.2*u; ctx.strokeStyle = `rgba(${col},.8)`; ctx.strokeRect(c0.x, yT, xEnd-c0.x, yB-yT); ctx.setLineDash([]);
+ctx.fillStyle = `rgba(${col},1)`; ctx.fillText('FVG'+(g.dir>0?'↑':'↓'), xEnd-3*u, yT+11*u);
+});
+pick.forEach(z => {
+const isS = z.p<=now, col = isS ? '#6fe3d9' : '#e69cff', y = -z.p, c0 = S.candles[Math.max(0,off+z.first)];
+const x0 = c0 ? c0.x : 0;
+ctx.setLineDash([8*u,5*u]); ctx.lineWidth = 1.8*u; ctx.strokeStyle = col;
+ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(xEnd, y); ctx.stroke(); ctx.setLineDash([]);
+const lab = (isS?'دعم':'مقاومة')+' ×'+z.touches, tw = ctx.measureText(lab).width+8*u;
+ctx.fillStyle = 'rgba(9,26,23,.85)'; ctx.fillRect(xEnd-tw, y-(isS?-2:13)*u, tw, 12*u);
+ctx.fillStyle = col; ctx.fillText(lab, xEnd-4*u, y+(isS?10:-3)*u);
+});
+ctx.restore();
+}
+function lvHtml(r){
+const L = r.levels; if(!L) return '';
+const A = r.A, now = r.nowP, dec = decimals();
+const pv = p => { const v = priceAt(-p); return v!=null ? v.toFixed(dec)+' · ' : ''; };
+const sup = L.zones.filter(z=>z.p<=now).sort((a,b)=>b.p-a.p)[0], res = L.zones.filter(z=>z.p>now).sort((a,b)=>a.p-b.p)[0];
+const cell = (cls,t,z) => `<div class="lc ${cls}"><small>${t}</small><b class="num">${z ? pv(z.p)+(Math.abs(z.p-now)/A).toFixed(2)+' ATR' : '—'}</b>${z?`<small class="num">${z.touches} لمسة</small>`:''}</div>`;
+const word = v => v>.08 ? 'يميل للصعود' : v<-.08 ? 'يميل للهبوط' : 'محايد';
+const sgn = v => (v>=0?'+':'−')+Math.abs(v).toFixed(2);
+const rel = g => now>=g.lo && now<=g.hi ? 'السعر داخلها' : now>g.hi ? 'السعر فوقها' : 'السعر تحتها';
+const gl = L.gaps.slice(-3).reverse().map(g => `<li><span>FVG ${g.dir>0?'صاعدة ↑':'هابطة ↓'} · ${((g.hi-g.lo)/A).toFixed(2)} ATR</span><span><i>${rel(g)} · ممتلئة ${Math.round(g.fill*100)}%</i></span></li>`).join('') || '<li><span>لا فجوات FVG نشطة في النافذة</span><span></span></li>';
+const E = r.lvEff, eff = E && E.n>=8
+? `قياس الأثر على هذا الشارت: بدون الدعم والمقاومة وFVG أصاب النموذج <b class="num">${E.h0}/${E.n}</b>، ومعها <b class="num">${E.h1}/${E.n}</b>${E.h1>E.h0?' (تحسّن)':E.h1<E.h0?' (تراجع)':' (لا فرق)'} — عينة صغيرة.`
+: 'قياس الأثر: عينة صغيرة جدًا لقياس أثر الدعم والمقاومة وFVG.';
+return `<h3>الدعم والمقاومة وFair Value Gap</h3>
+<div class="lvbox">
+<div class="two">${cell('r','أقرب مقاومة',res)}${cell('s','أقرب دعم',sup)}</div>
+<ul>${gl}</ul>
+<p class="tilt">الدعم والمقاومة: <span class="num">${sgn(r.f.sr)}</span> ${word(r.f.sr)} · FVG: <span class="num">${sgn(r.f.fvg)}</span> ${word(r.f.fvg)}</p>
+<p class="eff">${eff}</p>
+<p class="why">يدخلان في القرار بوزن ≈ 9% ضمن مجموعة مستقلة، ويُرسمان على الصورة (دعم بالتركواز، مقاومة بالبنفسجي، FVG مستطيلات). المسافات بوحدة ATR من السعر الحالي. هذه مفاهيم تقديرية وتحتاج حكمك، وأوزانها من عندي وغير مُدرَّبة.</p>
+</div>`;
+}
+function autoPanels(){
+const {W,H} = S, m = mask(70), r = S.region; let last = r.y1;
+for(let y=r.y1+1; y<H*.93; y++){
+let run=0, best=0;
+for(let x=0;x<W;x++){ if(m[y*W+x]){ if(++run>best) best=run; } else run=0; }
+if(best>W*.14) last=y; else if(y-last>40) break;
+}
+S.panelTop = last+12;
+const vp = detectVolPanel(S.panelTop);
+if(vp){ S.volRegion = vp; $('#btnVolClear').hidden = false; }
+}
+function detectVolPanel(yA){
+const {W,H,data} = S, yB = Math.floor(H*.90), xB = Math.floor(W*.86);
+const isBar = i => { const r=data[i], g=data[i+1], b=data[i+2]; return (g>r+30 && g>b+80 && g>120 && r>70) || (r>150 && g<90 && b<90); };
+const bot = {}; let tot = 0;
+for(let x=0;x<xB;x++){ let lo=-1; for(let y=yB-1;y>=yA;y--){ if(isBar((y*W+x)*4)){ lo=y; break; } } if(lo>=0){ bot[lo]=(bot[lo]||0)+1; tot++; } }
+if(tot<60) return null;
+let mode=-1, mc=-1;
+for(const k in bot){ let c=0; for(let d=-2;d<=2;d++) c+=bot[+k+d]||0; if(c>mc){ mc=c; mode=+k; } }
+if(mc<.5*tot) return null;
+let top = mode;
+for(let y=yA;y<=mode;y++){ let hit=false; for(let x=0;x<xB;x++) if(isBar((y*W+x)*4)){ hit=true; break; } if(hit){ top=y; break; } }
+if(mode-top<25) return null;
+return {x0:0, y0:top-6, x1:xB, y1:mode+1};
+}
+function cciSig(v){
+const n=v.length, x=v[n-1], p=v[n-2], q=v[Math.max(0,n-4)];
+let s = clamp(x/150,-1,1)*.35 + clamp((x-q)/120,-1,1)*.25;
+if(x>100) s += .25*Math.min(1,(x-100)/100);
+if(x<-100) s -= .25*Math.min(1,(-100-x)/100);
+if(p>100 && x<=100) s -= .5;
+if(p<-100 && x>=-100) s += .5;
+if(Math.abs(x)>250) s -= Math.sign(x)*.3;
+return clamp(s,-1,1);
+}
+function readCci(){
+if(S.cciBase!==S.base){ S.cciBase = S.base; S.cciRegion = null; $('#btnCciClear').hidden = true; }
+S.cciInfo = null; S.cciMode = 'calc'; const L = S.candles;
+L.forEach(c => { delete c.cciv; delete c.ccy; });
+if(L.length<16) return;
+const {W,H,data} = S, xB = Math.floor(W*.86), reg = S.cciRegion;
+const yA = reg ? Math.floor(reg.y0) : (S.panelTop!=null ? S.panelTop : Math.floor((S.region ? S.region.y1 : H*.7)+10));
+const yB = reg ? Math.ceil(reg.y1) : Math.floor(H*.93);
+const bright = (x,y) => { const i=(y*W+x)*4, r=data[i], g=data[i+1], b=data[i+2]; return r>180 && g>150 && b<110 && r-b>90; };
+const olive = (x,y) => { const i=(y*W+x)*4, r=data[i], g=data[i+1], b=data[i+2]; return r>110 && g>95 && b<90 && r-b>50 && Math.abs(r-g)<60; };
+const rows = [];
+for(let y=yA;y<yB;y++){ let c=0; for(let x=0;x<xB;x+=2) if(olive(x,y)) c++; if(c>=.8*(xB/2)) rows.push(y); }
+const lv = []; let grp = [];
+for(const y of rows){ if(grp.length && y-grp[grp.length-1]>2){ lv.push(mean(grp)); grp=[]; } grp.push(y); }
+if(grp.length) lv.push(mean(grp));
+if(lv.length<2) return;
+const yU = lv[0], yL = lv[1], ppu = (yL-yU)/200;
+if(yL-yU<20) return;
+const wy0 = Math.max(yA, Math.floor(yU-330*ppu)), wy1 = Math.min(yB, Math.ceil(yL+230*ppu));
+let found = 0, mn = 1e9, mx = -1;
+const ys = L.map(c => {
+const xs = Math.round(c.x), arr = [];
+for(let x=xs-1;x<=xs+1;x++) for(let y=wy0;y<wy1;y++) if(bright(x,y)) arr.push(y);
+if(!arr.length) return null; arr.sort((a,b)=>a-b); found++; return arr[arr.length>>1];
+});
+if(found < .6*L.length) return;
+for(let i=0;i<ys.length;i++) if(ys[i]==null){
+let a=i-1; while(a>=0 && ys[a]==null) a--; let b=i+1; while(b<ys.length && ys[b]==null) b++;
+ys[i] = a>=0 && b<ys.length ? ys[a]+(ys[b]-ys[a])*(i-a)/(b-a) : a>=0 ? ys[a] : ys[b];
+}
+L.forEach((c,i) => { c.ccy = ys[i]; c.cciv = 100 - 200*(ys[i]-yU)/(yL-yU); mn = Math.min(mn, ys[i]); mx = Math.max(mx, ys[i]); });
+S.cciMode = 'panel';
+S.cciInfo = {found, total:L.length, yU, yL, panel:{x0:0, y0:Math.min(mn,yU)-8, x1:xB, y1:Math.max(mx,yL)+8}};
+}
+function drawCci(u){
+const I = S.cciInfo; if(!I && !S.cciRegion) return;
+ctx.save();
+const pn = S.cciRegion || (I && I.panel);
+if(pn){ ctx.setLineDash([9*u,6*u]); ctx.lineWidth = 1.5*u; ctx.strokeStyle = 'rgba(244,193,93,.8)'; ctx.strokeRect(pn.x0, pn.y0, pn.x1-pn.x0, pn.y1-pn.y0); ctx.setLineDash([]); }
+if(I && S.boxes) S.candles.forEach((c,i) => {
+if(c.ccy==null) return;
+ctx.beginPath(); ctx.arc(c.x, c.ccy, 3.5*u, 0, 7); ctx.fillStyle = (S.skipLive && i===S.candles.length-1) ? '#f4c15d' : '#fff3c4'; ctx.fill();
+ctx.lineWidth = 1.2*u; ctx.strokeStyle = '#06120f'; ctx.stroke();
+});
+ctx.restore();
+}
+function cvHtml(r){
+const all = S.candles, base = S.skipLive ? all.slice(0,-1) : all, win = base.slice(-N);
+const cc = win.map(c=>c.cciv), hasC = cc.length>3 && cc.every(Number.isFinite), real = r.volMode==='real';
+const now = hasC ? cc[cc.length-1] : null, prev = hasC ? cc[cc.length-2] : null;
+const zone = v => v>100 ? 'فوق +100 (زخم صاعد قوي)' : v<-100 ? 'تحت −100 (زخم هابط قوي)' : 'داخل النطاق ±100';
+const ev = !hasC ? 'لم تُقرأ لوحة CCI من اللقطة، فاستُخدم CCI محسوب من الشموع.'
+: prev>100 && now<=100 ? 'CCI خرج من منطقة التشبع الشرائي (إشارة هبوط).'
+: prev<-100 && now>=-100 ? 'CCI خرج من منطقة التشبع البيعي (إشارة صعود).'
+: 'لا تقاطع لمستويات ±100 في آخر شمعة.';
+const W=300, H=64;
+let cciSvg = '';
+if(hasC){
+const st = W/(cc.length-1), yv = v => 32 - clamp(v,-250,250)/250*28;
+cciSvg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="${yv(100).toFixed(1)}" width="${W}" height="${(yv(-100)-yv(100)).toFixed(1)}" fill="rgba(244,193,93,.08)"/><line x1="0" x2="${W}" y1="${yv(100).toFixed(1)}" y2="${yv(100).toFixed(1)}" stroke="#4f7f73" stroke-dasharray="4 4"/><line x1="0" x2="${W}" y1="${yv(-100).toFixed(1)}" y2="${yv(-100).toFixed(1)}" stroke="#4f7f73" stroke-dasharray="4 4"/><polyline fill="none" stroke="#f4c15d" stroke-width="2" points="${cc.map((v,i)=>`${(i*st).toFixed(1)},${yv(v).toFixed(1)}`).join(' ')}"/></svg>`;
+}
+const vs = win.map(c=>c.v||0), vmax = Math.max(...vs, 1e-9), bw = W/vs.length;
+const ma = vs.map((_,i)=>mean(vs.slice(Math.max(0,i-9), i+1)));
+const volSvg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${vs.map((v,i)=>`<rect x="${(i*bw+bw*.12).toFixed(1)}" y="${(H-2-v/vmax*(H-8)).toFixed(1)}" width="${(bw*.76).toFixed(1)}" height="${Math.max(1,v/vmax*(H-8)).toFixed(1)}" fill="${win[i].c>=win[i].o?'#86e89a':'#ff7b66'}" opacity=".85"/>`).join('')}<polyline fill="none" stroke="#f4c15d" stroke-width="1.6" points="${ma.map((v,i)=>`${(i*bw+bw/2).toFixed(1)},${(H-2-v/vmax*(H-8)).toFixed(1)}`).join(' ')}"/></svg>`;
+const w3 = v => v>.08 ? 'يميل للصعود' : v<-.08 ? 'يميل للهبوط' : 'محايد';
+const sg = v => (v>=0?'+':'−')+Math.abs(v).toFixed(2);
+const confirm = r.dir ? (r.dir*r.f.vol>.1 ? 'الحجم يؤكد الاتجاه المتوقع' : r.dir*r.f.vol<-.1 ? 'الحجم يعاكس الاتجاه المتوقع' : 'الحجم محايد') : '';
+return `<h3>CCI و Volume في التنبؤ (الـ ${HZ} شموع القادمة = 15 دقيقة)</h3>
+<div class="cvbox">
+<div class="two">
+<div class="cc2"><small>CCI ${hasC?'(20) من اللوحة':'(محسوب)'}</small><b class="num">${now!=null ? now.toFixed(0) : '—'}</b><small>${now!=null ? zone(now) : w3(r.f.cci)}</small>${cciSvg}</div>
+<div class="cc2"><small>Volume ${real?'من اللوحة':'(بديل: مدى الشمعة)'}</small><b class="num">${r.rv.toFixed(2)}×</b><small>آخر 3 شموع إلى المتوسط</small>${volSvg}</div>
+</div>
+<p class="tilt">CCI <span class="num">${sg(r.f.cci)}</span> ${w3(r.f.cci)} · ضغط الحجم <span class="num">${sg(r.f.vol)}</span> · OBV <span class="num">${sg(r.f.obv)}</span> · تمدد الحجم <span class="num">${sg(r.f.volx)}</span></p>
+<p class="src">${ev} ${confirm}. وزن CCI في القرار ${hasC ? Math.round(S.cciShare*100)+'% (من اللوحة)' : '≈ 3% (محسوب)'}، والحجم الحقيقي 20%.</p>
+<p class="src">${r.cciEff && r.cciEff.n>=8 ? `قياس الأثر على هذا الشارت: بوزن CCI العادي (7%) أصاب النموذج <b class="num">${r.cciEff.hr}/${r.cciEff.n}</b>، وبالوزن الحالي (${Math.round(r.cciEff.share*100)}%) <b class="num">${r.cciEff.hc}/${r.cciEff.n}</b>${r.cciEff.hc>r.cciEff.hr?' (تحسّن)':r.cciEff.hc<r.cciEff.hr?' (تراجع)':' (لا فرق)'} — عينة صغيرة.` : 'قياس أثر وزن CCI: عينة صغيرة أو CCI غير مقروء من اللوحة.'}</p>
+</div>`;
+}
+function cciEffect(){
+if(S.cciMode!=='panel') return null;
+const all = S.candles, base = S.skipLive ? all.slice(0,-1) : all.slice(), keep = S.cciShare;
+S.cciShare = .07; const ref = weightsFor(S.volMode); S.cciShare = keep;
+let n=0, hc=0, hr=0;
+for(let t=base.length-1-HZ; t>=15; t--){
+const rr = score(base.slice(Math.max(0,t-N+1), t+1)), sc1 = rr.score; let sc0 = 0;
+for(const k in rr.f) sc0 += ref[k]*rr.f[k];
+const mv = base[t+HZ].c - base[t].c;
+if(mv===0 || Math.abs(sc1)<.03 || Math.abs(sc0)<.03) continue;
+n++; if((sc1>0)===(mv>0)) hc++; if((sc0>0)===(mv>0)) hr++;
+}
+return {n, hc, hr, share:keep};
+}
+function rsiSig(v){
+const n=v.length, x=v[n-1], p=v[n-2], q=v[Math.max(0,n-4)];
+let s = clamp((x-50)/25,-1,1)*.35 + clamp((x-q)/12,-1,1)*.30;
+if(p<30 && x>=30) s += .5;
+if(p>70 && x<=70) s -= .5;
+if(x>80) s -= .25*Math.min(1,(x-80)/10);
+if(x<20) s += .25*Math.min(1,(20-x)/10);
+return clamp(s,-1,1);
+}
+function rsiConfirms(dir, v){
+const n=v.length, x=v[n-1], p=v[n-2], q=v[Math.max(0,n-4)], rising=x-q>1, falling=q-x>1;
+if(dir>0) return (x>=45 && x<=72 && !falling) || (p<30 && x>=30) || (x<38 && rising);
+return (x<=55 && x>=28 && !rising) || (p>70 && x<=70) || (x>62 && falling);
+}
+function readRsi(){
+S.rsiInfo = null; S.rsiMode = 'calc'; const L = S.candles;
+L.forEach(c => { delete c.rsiv; delete c.rsiy; });
+if(L.length<16) return;
+const {W,H,data} = S, xB = Math.floor(W*.86), yB = Math.floor(H*.90);
+const yA = S.cciInfo ? Math.floor(S.cciInfo.yL+28) : (S.panelTop!=null ? S.panelTop : Math.floor((S.region ? S.region.y1 : H*.7)+10));
+if(yB-yA<60) return;
+const sum = (x,y) => { const i=(y*W+x)*4; return data[i]+data[i+1]+data[i+2]; };
+const samp = []; for(let y=yA;y<yB;y+=8) samp.push(sum(Math.floor(W*.45),y));
+samp.sort((a,b)=>a-b); const bgS = samp[samp.length>>1];
+const rows = [];
+for(let y=yA;y<yB;y++){
+let c=0;
+for(let x=0;x<xB;x+=2){ const i=(y*W+x)*4, r=data[i], g=data[i+1], b=data[i+2]; if(r+g+b>bgS+100 && !(b>r+30 && b>g+20)) c++; }
+if(c>=.8*(xB/2)) rows.push(y);
+}
+const gs = []; let grp = [];
+for(const y of rows){ if(grp.length && y-grp[grp.length-1]>2){ gs.push(mean(grp)); grp=[]; } grp.push(y); }
+if(grp.length) gs.push(mean(grp));
+if(gs.length<2 || gs.length>3) return;
+const yU = gs[0], yL = gs[gs.length-1];
+if(yL-yU<30) return;
+if(gs.length===3 && Math.abs(gs[1]-(yU+yL)/2) > .12*(yL-yU)) return;
+const ppu = (yL-yU)/40, wy0 = Math.max(yA, Math.floor(yU-32*ppu)), wy1 = Math.min(yB, Math.ceil(yL+32*ppu));
+const lime = (x,y) => { const i=(y*W+x)*4, r=data[i], g=data[i+1], b=data[i+2]; return g>140 && g>r+25 && g>b+80; };
+let found = 0, mn = 1e9, mx = -1;
+const ys = L.map(c => {
+const xs = Math.round(c.x), arr = [];
+for(let x=xs-1;x<=xs+1;x++) for(let y=wy0;y<wy1;y++) if(lime(x,y)) arr.push(y);
+if(!arr.length) return null; arr.sort((a,b)=>a-b); found++; return arr[arr.length>>1];
+});
+if(found < .6*L.length) return;
+for(let i=0;i<ys.length;i++) if(ys[i]==null){
+let a=i-1; while(a>=0 && ys[a]==null) a--; let b=i+1; while(b<ys.length && ys[b]==null) b++;
+ys[i] = a>=0 && b<ys.length ? ys[a]+(ys[b]-ys[a])*(i-a)/(b-a) : a>=0 ? ys[a] : ys[b];
+}
+L.forEach((c,i) => { c.rsiy = ys[i]; c.rsiv = 70 - 40*(ys[i]-yU)/(yL-yU); mn = Math.min(mn, ys[i]); mx = Math.max(mx, ys[i]); });
+S.rsiMode = 'panel';
+S.rsiInfo = {found, total:L.length, yU, yL, panel:{x0:0, y0:Math.min(mn,yU)-8, x1:xB, y1:Math.max(mx,yL)+8}};
+}
+function rsiSeriesNow(){
+const all = S.candles, base = S.skipLive ? all.slice(0,-1) : all, win = base.slice(-N);
+if(win.length>3 && win.every(c=>Number.isFinite(c.rsiv))) return {vals:win.map(c=>c.rsiv), src:'panel'};
+const cl = win.map(c=>c.c), vals = [];
+for(let k=cl.length-5;k<=cl.length;k++) vals.push(rsi(cl.slice(0,k), Math.min(14,k-1)));
+return {vals, src:'calc'};
+}
+function strongCheck(r){
+const dir = r.dir; if(!dir) return null;
+const rs = rsiSeriesNow(), v = rs.vals, x = v[v.length-1], q = v[Math.max(0,v.length-4)];
+const sg = u => (u>=0?'+':'−')+Math.abs(u).toFixed(2);
+const checks = [
+{label:'الموثوقية ≥ 70%', val:r.final+'%', ok:r.final>=70},
+{label:'RSI يؤكد '+(dir>0?'الشراء':'البيع'), val:x.toFixed(0)+(x-q>1?' ↑':q-x>1?' ↓':' →')+(rs.src==='panel'?' (لوحة)':' (محسوب)'), ok:rsiConfirms(dir,v)},
+{label:'CCI لا يعاكس', val:sg(r.f.cci), ok:dir*r.f.cci>-.2},
+{label:'الحجم لا يعاكس', val:sg(r.f.vol)+' / OBV '+sg(r.f.obv), ok:dir*r.f.vol>-.1 && dir*r.f.obv>-.2},
+{label:'ATR: نفس القرار في الحالتين', val:r.atr ? (r.atr.same?'نعم':'لا') : '—', ok:!r.atr || r.atr.same, skip:!r.atr}
+];
+return {checks, strong:checks.every(c=>c.ok||c.skip), rsi:{x, src:rs.src, vals:v}};
+}
+function drawRsi(u){
+const I = S.rsiInfo; if(!I) return;
+ctx.save();
+ctx.setLineDash([9*u,6*u]); ctx.lineWidth = 1.5*u; ctx.strokeStyle = 'rgba(200,242,107,.8)'; ctx.strokeRect(I.panel.x0, I.panel.y0, I.panel.x1-I.panel.x0, I.panel.y1-I.panel.y0); ctx.setLineDash([]);
+if(S.boxes) S.candles.forEach((c,i) => {
+if(c.rsiy==null) return;
+ctx.beginPath(); ctx.arc(c.x, c.rsiy, 3.5*u, 0, 7); ctx.fillStyle = (S.skipLive && i===S.candles.length-1) ? '#f4c15d' : '#e4ff9a'; ctx.fill();
+ctx.lineWidth = 1.2*u; ctx.strokeStyle = '#06120f'; ctx.stroke();
+});
+ctx.restore();
+}
+function rsHtml(r){
+const T = r.strong; if(!T) return '';
+const x = T.rsi.x, v = T.rsi.vals, W=300, H=64, yv = u => 58 - clamp(u,0,100)/100*52;
+const zone = x>70 ? 'تشبّع شرائي (فوق 70)' : x<30 ? 'تشبّع بيعي (تحت 30)' : x>=50 ? 'فوق 50 (زخم صاعد)' : 'تحت 50 (زخم هابط)';
+const st = W/(v.length-1);
+const svg = T.rsi.src==='panel' ? `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${[70,50,30].map(l=>`<line x1="0" x2="${W}" y1="${yv(l).toFixed(1)}" y2="${yv(l).toFixed(1)}" stroke="#4f7f73" stroke-dasharray="4 4"/>`).join('')}<polyline fill="none" stroke="#c8f26b" stroke-width="2" points="${v.map((u,i)=>`${(i*st).toFixed(1)},${yv(u).toFixed(1)}`).join(' ')}"/></svg>` : '';
+const chk = `<ul class="chk">${T.checks.map(c=>`<li class="${c.skip?'skip':c.ok?'ok':'no'}"><i>${c.skip?'–':c.ok?'✔':'✘'}</i><span>${c.label}</span><b class="num">${c.val}</b></li>`).join('')}</ul>`;
+const head = T.strong ? `✔ ${r.dir>0?'شراء قوي':'بيع قوي'}: كل الفلاتر تؤكد الاتجاه` : `الإشارة ${r.dir>0?'شراء':'بيع'} لكن لا تستوفي كل فلاتر الإشارة القوية`;
+return `<h3>RSI وفلاتر الإشارة القوية</h3>
+<div class="cvbox">
+<div class="cc2"><small>RSI ${T.rsi.src==='panel'?'(من اللوحة)':'(محسوب)'}</small><b class="num">${x.toFixed(0)}</b><small>${zone}</small>${svg}</div>
+<p class="strongbox" style="color:var(--${T.strong?(r.dir>0?'up':'down'):'amber'})">${head}</p>
+${chk}
+<p class="src">RSI يُقرأ هكذا: فوق 50 وصاعد يدعم الشراء، وتحت 50 وهابط يدعم البيع، والخروج من تحت 30 أو من فوق 70 إشارة انعكاس، أما الشراء داخل تشبّع شرائي (فوق 72) فلا يُعتبر مؤكَّدًا. وزن RSI في القرار ${S.rsiMode==='panel' ? Math.round(S.rsiShare*100)+'% (من اللوحة)' : '≈ 4% (محسوب)'}.</p>
+</div>`;
+}
+function swing(arr, k){
+const hi = [], lo = [], n = arr.length;
+for(let i=k;i<n;i++){
+const kr = Math.min(k, n-1-i); let h=true, l=true;
+for(let j=1;j<=k;j++){ if(!(arr[i]>arr[i-j])) h=false; if(!(arr[i]<arr[i-j])) l=false; }
+for(let j=1;j<=kr;j++){ if(!(arr[i]>=arr[i+j])) h=false; if(!(arr[i]<=arr[i+j])) l=false; }
+if(h) hi.push({i, forming:kr<k}); if(l) lo.push({i, forming:kr<k});
+}
+return {hi, lo};
+}
+function findDivergence(w, rs){
+const n = w.length; if(n<12 || rs.length!==n) return null;
+const A = Math.max(atr(w),1e-6), sw = swing(rs,2), cand = [];
+const pxHi = i => { let b=-1, v=-1e18; for(let j=Math.max(0,i-1); j<=Math.min(n-1,i+1); j++) if(w[j].h>v){ v=w[j].h; b=j; } return {j:b, v}; };
+const pxLo = i => { let b=-1, v=1e18; for(let j=Math.max(0,i-1); j<=Math.min(n-1,i+1); j++) if(w[j].l<v){ v=w[j].l; b=j; } return {j:b, v}; };
+const scan = (list, isHigh) => {
+for(const B of list){
+const b = B.i; if(n-1-b>8) continue;
+for(const Aa of list){
+const a = Aa.i; if(b-a<3 || n-1-a>22) continue;
+const pa = isHigh ? pxHi(a) : pxLo(a), pb = isHigh ? pxHi(b) : pxLo(b);
+if(pb.j<=pa.j) continue;
+const dP = (pb.v-pa.v)/A, dR = rs[b]-rs[a];
+let dir=0, kind='';
+if(isHigh){ if(dP>.1 && dR<-2){ dir=-1; kind='regular'; } else if(dP<-.1 && dR>2){ dir=-1; kind='hidden'; } }
+else { if(dP<-.1 && dR>2){ dir=1; kind='regular'; } else if(dP>.1 && dR<-2){ dir=1; kind='hidden'; } }
+if(!dir) continue;
+let clean = true;
+for(let j=pa.j+1; j<pb.j && clean; j++){
+const lp = pa.v + (pb.v-pa.v)*(j-pa.j)/(pb.j-pa.j);
+if(isHigh ? (w[j].h-lp > .3*A) : (lp-w[j].l > .3*A)) clean = false;
+}
+for(let j=a+1; j<b && clean; j++){
+const lr = rs[a] + (rs[b]-rs[a])*(j-a)/(b-a);
+if(isHigh ? (rs[j]-lr > 4) : (lr-rs[j] > 4)) clean = false;
+}
+if(!clean) continue;
+const zone = kind==='regular' ? ((isHigh ? rs[a]>=60 : rs[a]<=40) ? 1 : .4) : .7;
+let st = .35*Math.min(1,Math.abs(dR)/15) + .25*Math.min(1,Math.abs(dP)/1.2) + .2*zone + .2*Math.max(0,1-(n-1-b)/10);
+st = clamp(st,0,1)*(kind==='hidden' ? .85 : 1)*(B.forming ? .8 : 1);
+cand.push({dir, kind, isHigh, strength:st, ago:n-1-b, dP, dR, forming:B.forming, between:list.filter(q => q.i>a && q.i<b).length,
+a:{iR:a, iP:pa.j, rsi:rs[a], px:pa.v}, b:{iR:b, iP:pb.j, rsi:rs[b], px:pb.v}});
+}
+}
+};
+scan(sw.hi, true); scan(sw.lo, false);
+if(!cand.length) return null;
+cand.sort((x,y) => y.strength-x.strength || x.ago-y.ago);
+return cand[0];
+}
+function rsiSeriesFull(cl, p){
+const n = cl.length, out = new Array(n).fill(50); if(n<=p+1) return out;
+let g=0, l=0; for(let i=1;i<=p;i++){ const d=cl[i]-cl[i-1]; if(d>=0) g+=d; else l-=d; }
+g/=p; l/=p; const f = () => l===0 ? 100 : 100-100/(1+g/l);
+for(let i=0;i<=p;i++) out[i] = f();
+for(let i=p+1;i<n;i++){ const d=cl[i]-cl[i-1]; g=(g*(p-1)+Math.max(d,0))/p; l=(l*(p-1)+Math.max(-d,0))/p; out[i]=f(); }
+return out;
+}
+function divergenceLayer(res){
+const all = S.candles, base = S.skipLive ? all.slice(0,-1) : all.slice();
+if(base.length<16) return null;
+const usePanel = base.every(c => Number.isFinite(c.rsiv));
+const rsAll = usePanel ? base.map(c=>c.rsiv) : rsiSeriesFull(base.map(c=>c.c), 14);
+const win = base.slice(-N), off = base.length-win.length, rs = rsAll.slice(off);
+const cur = findDivergence(win, rs);
+let n = 0, hit = 0; const seen = new Set();
+for(let t=15; t<=base.length-1-HZ; t++){
+const a = Math.max(0,t-N+1), d = findDivergence(base.slice(a,t+1), rsAll.slice(a,t+1));
+if(!d) continue;
+const key = (a+d.b.iR)+'|'+d.isHigh; if(seen.has(key)) continue; seen.add(key);
+const mv = base[t+HZ].c - base[t].c; if(mv===0) continue;
+n++; if((d.dir>0)===(mv>0)) hit++;
+}
+const out = {dir:0, usePanel, n, hit, win:win.map(c=>({c:c.c,h:c.h,l:c.l})), rs};
+if(!cur) return out;
+let conf = 50 + 30*cur.strength;
+if(n>=6) conf = .6*conf + .4*((hit+10)/(n+20)*100);
+return {...out, ...cur, conf:Math.round(clamp(conf,50,82)),
+a:{...cur.a, absP:off+cur.a.iP, absR:off+cur.a.iR}, b:{...cur.b, absP:off+cur.b.iP, absR:off+cur.b.iR}};
+}
+function drawDiv(u){
+const r = S.result, D = r && r.div; if(!D || !D.dir || !S.candles.length) return;
+const C = S.candles, ca = C[D.a.absP], cb = C[D.b.absP]; if(!ca || !cb) return;
+const col = D.dir>0 ? '#86e89a' : '#ff7b66';
+ctx.save(); ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 2.6*u; ctx.setLineDash(D.kind==='hidden' ? [6*u,4*u] : []);
+const y1 = D.isHigh ? ca.yh : ca.yl, y2 = D.isHigh ? cb.yh : cb.yl;
+ctx.beginPath(); ctx.moveTo(ca.x,y1); ctx.lineTo(cb.x,y2); ctx.stroke(); ctx.setLineDash([]);
+[[ca.x,y1],[cb.x,y2]].forEach(([x,y]) => { ctx.beginPath(); ctx.arc(x,y,4.5*u,0,7); ctx.fill(); });
+ctx.font = `700 ${12*u}px sans-serif`; ctx.textAlign = 'center';
+ctx.fillText('Div ' + (D.dir>0?'↑':'↓'), (ca.x+cb.x)/2, Math.min(y1,y2) + (D.isHigh ? -10*u : 20*u));
+const ra = C[D.a.absR], rb = C[D.b.absR];
+if(S.rsiInfo && ra && rb && ra.rsiy!=null && rb.rsiy!=null){
+ctx.setLineDash(D.kind==='hidden' ? [6*u,4*u] : []); ctx.beginPath(); ctx.moveTo(ra.x,ra.rsiy); ctx.lineTo(rb.x,rb.rsiy); ctx.stroke(); ctx.setLineDash([]);
+[[ra.x,ra.rsiy],[rb.x,rb.rsiy]].forEach(([x,y]) => { ctx.beginPath(); ctx.arc(x,y,4.5*u,0,7); ctx.fill(); });
+}
+ctx.restore();
+}
+function dvSvg(D){
+const W=300, H1=70, H2=56, gap=6, n=D.win.length, st=W/(n-1);
+const mn = Math.min(...D.win.map(c=>c.l)), mx = Math.max(...D.win.map(c=>c.h));
+const py = v => H1-4-(v-mn)/((mx-mn)||1)*(H1-8), ry = v => H1+gap+H2-3-clamp(v,0,100)/100*(H2-6), X = i => (i*st).toFixed(1);
+const col = D.dir>0 ? '#86e89a' : '#ff7b66';
+let g = [30,50,70].map(l => `<line x1="0" x2="${W}" y1="${ry(l).toFixed(1)}" y2="${ry(l).toFixed(1)}" stroke="#4f7f73" stroke-dasharray="4 4"/>`).join('');
+g += `<polyline fill="none" stroke="#8fb0a6" stroke-width="1.6" points="${D.win.map((c,i)=>`${X(i)},${py(c.c).toFixed(1)}`).join(' ')}"/>`;
+g += `<polyline fill="none" stroke="#c8f26b" stroke-width="1.8" points="${D.rs.map((v,i)=>`${X(i)},${ry(v).toFixed(1)}`).join(' ')}"/>`;
+if(D.dir){
+const da = D.dir ? (D.kind==='hidden' ? '5 3' : '') : '';
+g += `<line x1="${X(D.a.iP)}" y1="${py(D.a.px).toFixed(1)}" x2="${X(D.b.iP)}" y2="${py(D.b.px).toFixed(1)}" stroke="${col}" stroke-width="2.4" stroke-dasharray="${da}"/>`;
+g += `<line x1="${X(D.a.iR)}" y1="${ry(D.a.rsi).toFixed(1)}" x2="${X(D.b.iR)}" y2="${ry(D.b.rsi).toFixed(1)}" stroke="${col}" stroke-width="2.4" stroke-dasharray="${da}"/>`;
+g += [[D.a.iP,py(D.a.px)],[D.b.iP,py(D.b.px)],[D.a.iR,ry(D.a.rsi)],[D.b.iR,ry(D.b.rsi)]].map(([i,y]) => `<circle cx="${X(i)}" cy="${y.toFixed(1)}" r="3.5" fill="${col}"/>`).join('');
+}
+return `<svg viewBox="0 0 ${W} ${H1+gap+H2}" preserveAspectRatio="none" aria-hidden="true">${g}</svg>`;
+}
+function dvHtml(r){
+const D = r.div; if(!D) return '';
+const L5 = r.l5;
+const wd = d => d>0 ? 'شراء' : d<0 ? 'بيع' : 'لا يوجد', cl = d => d>0 ? 'up' : d<0 ? 'down' : 'flat';
+const kindTxt = D.dir ? `${D.kind==='regular'?'عادي':'مخفي'} ${D.dir>0?'صاعد':'هابط'}${D.forming?' (قيد التكوّن)':''}` : '';
+const sigs = [r.dir, D.dir, L5 ? L5.dir : 0].filter(d => d!==0);
+const buys = sigs.filter(d=>d>0).length, sells = sigs.filter(d=>d<0).length;
+const agree = sigs.length<2 ? 'إشارة واحدة فقط فعّالة حاليًا' : (buys===sigs.length || sells===sigs.length) ? `✔ الإشارات الفعّالة (${sigs.length}) متفقة على ${buys?'الشراء':'البيع'}` : `✘ الإشارات متضاربة: ${buys} شراء / ${sells} بيع — الأفضل الانتظار أو تخفيف الحجم`;
+const agCol = sigs.length<2 ? 'var(--mute)' : (buys===sigs.length || sells===sigs.length) ? 'var(--up)' : 'var(--amber)';
+const why = !D.dir ? '' : D.kind==='regular'
+? (D.isHigh ? 'السعر صنع قمة أعلى بينما RSI صنع قمة أدنى: ضعف في الصعود قد ينعكس هبوطًا.' : 'السعر صنع قاعًا أدنى بينما RSI صنع قاعًا أعلى: ضعف في الهبوط قد ينعكس صعودًا.')
+: (D.isHigh ? 'السعر صنع قمة أدنى بينما RSI صنع قمة أعلى: استمرار محتمل للهبوط.' : 'السعر صنع قاعًا أعلى بينما RSI صنع قاعًا أدنى: استمرار محتمل للصعود.');
+const det = !D.dir ? '' : `<p class="src">${D.isHigh?'القمة':'القاع'} الأولى: RSI <b class="num">${D.a.rsi.toFixed(0)}</b> → الأخيرة: RSI <b class="num">${D.b.rsi.toFixed(0)}</b> (قبل <b class="num">${D.ago}</b> شموع${D.between ? '، ويفصل بينهما '+D.between+' '+(D.isHigh?'قمة':'قاع')+' أخرى' : ''}${D.forming ? '، والقمة/القاع الأخير قيد التكوّن وغير مؤكَّد بعد' : ''})، فرق السعر <b class="num">${(Math.abs(D.b.px-D.a.px)/r.A).toFixed(2)} ATR</b>. ${why}</p>`;
+const hist = D.n>=1 ? `ظهر الدايفرجنس في هذا الشارت ${D.n} مرة: أصاب اتجاهه بعد ${HZ} شموع في ${D.hit}.` : 'لا حالات دايفرجنس سابقة في اللقطة لقياس موثوقيته.';
+const l5card = !L5 ? '' : (() => {
+const w = L5.dir ? wd(L5.dir) : '—';
+const sub = !L5.active ? (L5.reason || 'غير مفعّلة') : L5.decision==='reverse' ? `انعكاس من ${L5.dir5>0?'صعود':'هبوط'}` : L5.decision==='continue' ? `استمرار ${L5.dir5>0?'الصعود':'الهبوط'}` : 'غير حاسمة';
+return `<div class="dvc" data-dir="${cl(L5.dir)}"><small>آخر 5 شموع (انعكاس؟)</small><b class="sw">${w}</b><span class="num">${L5.dir ? L5.conf+'%' : '—'}</span><em>${sub}</em></div>`;
+})();
+return `<h3>ثلاث قراءات منفصلة: المؤشرات (30 شمعة) · الدايفرجنس · آخر 5 شموع</h3>
+<div class="dvbox">
+<div class="dvtwo">
+<div class="dvc" data-dir="${cl(r.dir)}"><small>المؤشرات (${r.total}) · 30 شمعة</small><b class="sw">${wd(r.dir)}</b><span class="num">${r.final}%</span><em>خلال ${HZ} شموع (15 دقيقة)</em></div>
+<div class="dvc" data-dir="${cl(D.dir)}"><small>الدايفرجنس (RSI)</small><b class="sw">${wd(D.dir)}</b><span class="num">${D.dir ? D.conf+'%' : '—'}</span><em>${D.dir ? 'دايفرجنس '+kindTxt : 'لا دايفرجنس'}</em></div>
+${l5card}
+</div>
+<p class="dvag" style="color:${agCol}">${agree}</p>
+${D.dir ? dvSvg(D) : ''}
+${det}
+<p class="src">${hist} RSI ${D.usePanel ? 'مقروء من اللوحة' : 'محسوب من الشموع'}. القراءات الثلاث منفصلة تمامًا ولا تدخل في درجة بعضها. الدايفرجنس يبحث بين أي قمتين (أو قاعين) في آخر نحو 20 شمعة حتى لو فصل بينهما قمة أخرى، بشرط ألا تتجاوز الشموع وRSI بينهما خط الوصل، وأن يكون آخر طرف حديثًا (≤ 8 شموع). والعينة التاريخية صغيرة.</p>
+</div>`;
+}
+function last5Layer(res){
+const all = S.candles, base = S.skipLive ? all.slice(0,-1) : all.slice();
+if(base.length<12) return null;
+const A = res.A;
+const dirOf = (arr, end) => { const net = arr[end].c-arr[end-5].c, dir = Math.sign(net); return {net, dir, agree:arr.slice(end-4,end+1).filter(c => dir>0 ? c.c>c.o : c.c<c.o).length}; };
+const end = base.length-1, dd = dirOf(base,end), netA = dd.net/A, dir = dd.dir;
+const clear = Math.abs(netA)>=.5 && dd.agree>=3;
+let n = 0, rev = 0;
+for(let t=12; t<=base.length-1-HZ; t++){
+const d = dirOf(base,t), At = Math.max(atr(base.slice(Math.max(0,t-N+1),t+1)),1e-6);
+if(Math.abs(d.net/At)>=.5 && d.agree>=3){ const mv = base[t+HZ].c-base[t].c; if(mv===0) continue; n++; if(mv*d.dir<0) rev++; }
+}
+const out = {clear, dir5:dir, netA, agree:dd.agree, n, rev, active:false, dir:0, decision:'off', feats:[], p:null, conf:0, reason:''};
+if(!clear){ out.reason = 'لا اتجاه واضح في آخر 5 شموع'; return out; }
+const g5 = base.slice(-5), dirBody = c => dir*(c.c-c.o), rngOf = c => (c.h-c.l)||1e-6;
+const prev4 = g5.slice(0,4).map(dirBody).filter(v=>v>0), lastB = dirBody(g5[4]), mb = prev4.length ? mean(prev4) : 0;
+const wick = c => dir>0 ? (c.h-Math.max(c.o,c.c))/rngOf(c) : (Math.min(c.o,c.c)-c.l)/rngOf(c);
+const rs = rsiSeriesNow().vals, rx = rs[rs.length-1];
+const cv = base[end].cciv, vm = mean(base.slice(-N).map(c=>c.v||0)) || 1;
+const L = res.levels, dLvl = L ? (dir>0 ? L.dR : L.dS) : null;
+const feats = [
+{label:'امتداد الحركة (صافي آخر 5)', w:.20, f:clamp((Math.abs(netA)-.5)/2.5,0,1), val:Math.abs(netA).toFixed(2)+' ATR'},
+{label:'ضعف زخم آخر شمعة', w:.15, f:lastB<0 ? 1 : (mb>0 ? clamp(1-lastB/mb,0,1) : .5), val:lastB<0 ? 'شمعة عكسية' : 'جسمها '+(mb>0 ? Math.round(lastB/mb*100) : 0)+'% من المتوسط'},
+{label:'ذيل رفض ضد الاتجاه (آخر شمعتين)', w:.15, f:clamp(mean(g5.slice(-2).map(wick))/.5,0,1), val:Math.round(mean(g5.slice(-2).map(wick))*100)+'% من المدى'},
+{label:'RSI عند طرف '+(dir>0?'علوي':'سفلي'), w:.15, f:dir>0 ? clamp((rx-60)/20,0,1) : clamp((40-rx)/20,0,1), val:rx.toFixed(0)},
+{label:'CCI عند طرف '+(dir>0?'علوي':'سفلي'), w:.10, f:Number.isFinite(cv) ? (dir>0 ? clamp((cv-100)/100,0,1) : clamp((-100-cv)/100,0,1)) : null, val:Number.isFinite(cv) ? cv.toFixed(0) : 'غير مقروء'},
+{label:'ذروة حجم في آخر شمعتين', w:.10, f:clamp((Math.max(...g5.slice(-2).map(c=>c.v||0))/vm-1)/1,0,1), val:(Math.max(...g5.slice(-2).map(c=>c.v||0))/vm).toFixed(2)+'×'},
+{label:'قرب '+(dir>0?'مقاومة':'دعم'), w:.10, f:dLvl==null ? 0 : clamp(1-dLvl/1,0,1), val:dLvl==null ? 'لا يوجد' : dLvl.toFixed(2)+' ATR'}
+];
+const use = feats.filter(x => x.f!=null), E = use.reduce((t,x)=>t+x.w*x.f,0)/use.reduce((t,x)=>t+x.w,0);
+const pHeur = clamp(.5+.5*(E-.45),.25,.8), p = n>0 ? (rev+8*pHeur)/(n+8) : pHeur;
+const decision = p>=.56 ? 'reverse' : p<=.44 ? 'continue' : 'unclear';
+return {...out, active:true, E, pHeur, p, feats, decision, dir:decision==='reverse' ? -dir : decision==='continue' ? dir : 0, conf:Math.round(clamp(Math.max(p,1-p)*100,50,82))};
+}
+function l5Html(r){
+const L5 = r.l5; if(!L5) return '';
+const w = d => d>0 ? 'صعود' : d<0 ? 'هبوط' : '—';
+const hist = L5.n>=1 ? `في هذا الشارت تكرر وجود اتجاه واضح لآخر 5 شموع ${L5.n} مرة: انعكس السعر بعد ${HZ} شموع في ${L5.rev} منها (إحصاء لكل الحالات، بدون شرط ATR).` : 'لا حالات سابقة في اللقطة لنفس الشرط، فالاحتمال من القواعد التقديرية فقط.';
+const cells = `<div class="cell"><small>اتجاه آخر 5 شموع</small><b>${w(L5.dir5)}</b><small class="num">${L5.agree}/5 شموع بنفس الاتجاه</small></div>
+<div class="cell"><small>صافي الحركة</small><b class="num">${Math.abs(L5.netA).toFixed(2)} ATR</b><small>${L5.clear ? 'اتجاه واضح' : 'اتجاه ضعيف'}</small></div>
+<div class="cell"><small>احتمال الانعكاس</small><b class="num">${L5.p!=null ? Math.round(L5.p*100)+'%' : '—'}</b><small>${L5.active ? (L5.decision==='reverse' ? 'انعكاس مرجّح' : L5.decision==='continue' ? 'استمرار مرجّح' : 'غير حاسم') : 'غير مفعّلة'}</small></div>`;
+const ev = !L5.active ? `<p class="src">${L5.reason}. تُعرض القراءة عندما يكون لآخر 5 شموع اتجاه واضح (صافي ≥ 0.5 ATR وثلاث شموع على الأقل بنفس الاتجاه).</p>`
+: `<ul class="chk">${L5.feats.map(x => { const c = x.f==null ? 'skip' : x.f>=.5 ? 'ok' : x.f<.25 ? 'no' : 'skip'; return `<li class="${c}"><i>${x.f==null?'–':x.f>=.5?'✔':x.f<.25?'✘':'~'}</i><span>${x.label}${x.f!=null ? `<span class="evbar"><i style="width:${Math.round(x.f*100)}%"></i></span>` : ''}</span><b class="num">${x.val}</b></li>`; }).join('')}</ul>
+<p class="src">✔ = دليل على الانعكاس، ✘ = دليل على الاستمرار. درجة الأدلة <b class="num">${Math.round(L5.E*100)}%</b> تعطي احتمالًا تقديريًا <b class="num">${Math.round(L5.pHeur*100)}%</b> للانعكاس، ثم يُدمج مع التاريخ في هذا الشارت (عند وجوده).</p>`;
+return `<h3>قراءة آخر 5 شموع: هل ينعكس السعر؟ (منفصلة عن الـ 30 شمعة)</h3>
+<div class="l5box">
+<div class="l5top">${cells}</div>
+${ev}
+<p class="src">${hist} الموقع لا يشترط شيئًا على ATR في هذه الإشارة: أنت تقرر متى تعتمد عليها (عندما يكون ATR عاليًا بقياسك). الاحتمال الأعلى من 56% يعني انعكاسًا، وأقل من 44% يعني استمرارًا، وما بينهما غير حاسم. قواعد وأوزان تقديرية غير مُدرَّبة، والعينة التاريخية صغيرة ومتداخلة.</p>
+</div>`;
+}
+function drawL5(u){
+const r = S.result, L5 = r && r.l5; if(!L5 || !L5.active || !S.candles.length) return;
+const n = S.candles.length, e = n-(S.skipLive ? 2 : 1), g = S.candles.slice(Math.max(0,e-4), e+1); if(g.length<5) return;
+const x0 = g[0].x-S.bw/2-4*u, x1 = g[4].x+S.bw/2+4*u, y0 = Math.min(...g.map(c=>c.yh))-6*u, y1 = Math.max(...g.map(c=>c.yl))+6*u;
+ctx.save(); ctx.strokeStyle = '#b69cff'; ctx.fillStyle = '#b69cff'; ctx.lineWidth = 2*u; ctx.setLineDash([3*u,3*u]);
+ctx.strokeRect(x0,y0,x1-x0,y1-y0); ctx.setLineDash([]);
+ctx.font = `700 ${11*u}px sans-serif`; ctx.textAlign = 'left';
+const lab = '5✓ ' + (L5.decision==='reverse' ? 'انعكاس '+(L5.dir>0?'↑':'↓') : L5.decision==='continue' ? 'استمرار '+(L5.dir>0?'↑':'↓') : 'غير حاسم');
+ctx.fillText(lab, x0, y0-4*u);
+ctx.restore();
+}
+function hint(t, warn){ const h=$('#hint'); h.textContent=t; h.classList.toggle('warn', !!warn); }
+function toImg(e){
+const r = cv.getBoundingClientRect();
+return {x:(e.clientX-r.left)*cv.width/r.width, y:(e.clientY-r.top)*cv.height/r.height};
+}
+function setMode(m){
+S.mode = m;
+cv.classList.toggle('crosshair', !!m);
+cv.style.touchAction = m ? 'none' : 'auto';
+$('#btnRegion').classList.toggle('on', m==='region');
+$('#btnVol').classList.toggle('on', m==='vol');
+document.querySelectorAll('[data-pick]').forEach(b => b.classList.toggle('on', m==='pick'+b.dataset.pick));
+if(m==='region') hint('اسحب على الصورة لتحديد مستطيل يحتوي الشموع فقط (بدون الأسعار والأزرار).');
+else if(m==='vol') hint('اسحب على لوحة أعمدة الحجم أسفل الشارت (الأعمدة فقط، وبنفس محور الزمن مثل الشموع).');
+else if(m) hint('اضغط على الصورة عند الخط الذي تعرف سعره.');
+}
+cv.addEventListener('pointerdown', e => {
+const p = toImg(e);
+if(S.mode==='region' || S.mode==='vol'){
+S.dragKey = S.mode==='vol' ? 'volRegion' : 'region';
+S.drag = p; S[S.dragKey] = {x0:p.x,y0:p.y,x1:p.x,y1:p.y}; cv.setPointerCapture(e.pointerId); render();
+} else if(S.mode && S.mode.startsWith('pick')){
+const i = +S.mode.slice(4);
+S.calib[i].y = p.y; $('#y'+i).textContent = 'تم'; setMode(null);
+readCalib(); if(S.candles.length) run(); else render();
+}
+});
+cv.addEventListener('pointermove', e => {
+if(!S.drag) return;
+const p = toImg(e); S[S.dragKey] = {x0:S.drag.x, y0:S.drag.y, x1:p.x, y1:p.y}; render();
+});
+cv.addEventListener('pointerup', () => {
+if(!S.drag) return;
+const k = S.dragKey, r = S[k];
+S[k] = {x0:Math.max(0,Math.min(r.x0,r.x1)), y0:Math.max(0,Math.min(r.y0,r.y1)), x1:Math.min(S.W-1,Math.max(r.x0,r.x1)), y1:Math.min(S.H-1,Math.max(r.y0,r.y1))};
+S.drag = null; setMode(null);
+if(S[k].x1-S[k].x0 < 60 || S[k].y1-S[k].y0 < 12){ S[k] = k==='region' ? autoRegion() : null; }
+$('#btnVolClear').hidden = !S.volRegion;
+run();
+});
+function readCalib(){
+[0,1].forEach(i => {
+const raw = $('#p'+i).value.trim().replace(',', '.');
+S.calib[i].raw = raw; const v = parseFloat(raw); S.calib[i].p = isFinite(v) ? v : null;
+});
+}
+document.querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => setMode(S.mode==='pick'+b.dataset.pick ? null : 'pick'+b.dataset.pick)));
+['p0','p1'].forEach(id => $('#'+id).addEventListener('input', () => { readCalib(); if(S.result){ renderResult(S.result); render(); } }));
+$('#btnRegion').addEventListener('click', () => setMode(S.mode==='region' ? null : 'region'));
+$('#btnVol').addEventListener('click', () => setMode(S.mode==='vol' ? null : 'vol'));
+$('#btnVolClear').addEventListener('click', () => { S.volRegion = null; $('#btnVolClear').hidden = true; if(S.base) run(); });
+$('#btnNew').addEventListener('click', () => { $('#stage').hidden = true; $('#drop').hidden = false; $('#file').value=''; S.result=null; S.base=null; S.volRegion=null; $('#btnVolClear').hidden=true; renderResult(null); $('#result').innerHTML = '<div class="empty"><div>سيظهر التوقع هنا بعد رفع الصورة</div></div>'; });
+$('#optBoxes').addEventListener('change', e => { S.boxes = e.target.checked; render(); });
+$('#optLive').addEventListener('change', e => { S.skipLive = e.target.checked; if(S.base) run(); });
+$('#btnAtr').addEventListener('click', () => { setMode(S.mode==='atr' ? null : 'atr'); if(S.mode==='atr') hint('اسحب على لوحة مؤشر ATR أسفل الشارت (الخط الأزرق فقط).'); });
+$('#btnAtrClear').addEventListener('click', () => { S.atrRegion = null; $('#btnAtrClear').hidden = true; if(S.base) run(); });
+cv.addEventListener('pointerdown', e => { if(S.mode!=='atr') return; const p = toImg(e); S.atrDrag = p; S.atrRegion = {x0:p.x,y0:p.y,x1:p.x,y1:p.y}; cv.setPointerCapture(e.pointerId); render(); });
+cv.addEventListener('pointermove', e => { if(!S.atrDrag) return; const p = toImg(e); S.atrRegion = {x0:S.atrDrag.x,y0:S.atrDrag.y,x1:p.x,y1:p.y}; render(); });
+cv.addEventListener('pointerup', () => {
+if(!S.atrDrag) return; const r = S.atrRegion;
+S.atrRegion = {x0:Math.max(0,Math.min(r.x0,r.x1)), y0:Math.max(0,Math.min(r.y0,r.y1)), x1:Math.min(S.W-1,Math.max(r.x0,r.x1)), y1:Math.min(S.H-1,Math.max(r.y0,r.y1))};
+S.atrDrag = null; setMode(null);
+if(S.atrRegion.x1-S.atrRegion.x0<60 || S.atrRegion.y1-S.atrRegion.y0<12) S.atrRegion = null;
+$('#btnAtrClear').hidden = !S.atrRegion; run();
+});
+$('#btnCci').addEventListener('click', () => { setMode(S.mode==='cci' ? null : 'cci'); if(S.mode==='cci') hint('اسحب على لوحة CCI أسفل الشارت (الخط الذهبي مع خطي ±100).'); });
+$('#btnCciClear').addEventListener('click', () => { S.cciRegion = null; $('#btnCciClear').hidden = true; if(S.base) run(); });
+cv.addEventListener('pointerdown', e => { if(S.mode!=='cci') return; const p = toImg(e); S.cciDrag = p; S.cciRegion = {x0:p.x,y0:p.y,x1:p.x,y1:p.y}; cv.setPointerCapture(e.pointerId); render(); });
+cv.addEventListener('pointermove', e => { if(!S.cciDrag) return; const p = toImg(e); S.cciRegion = {x0:S.cciDrag.x,y0:S.cciDrag.y,x1:p.x,y1:p.y}; render(); });
+cv.addEventListener('pointerup', () => {
+if(!S.cciDrag) return; const r = S.cciRegion;
+S.cciRegion = {x0:Math.max(0,Math.min(r.x0,r.x1)), y0:Math.max(0,Math.min(r.y0,r.y1)), x1:Math.min(S.W-1,Math.max(r.x0,r.x1)), y1:Math.min(S.H-1,Math.max(r.y0,r.y1))};
+S.cciDrag = null; setMode(null);
+if(S.cciRegion.x1-S.cciRegion.x0<60 || S.cciRegion.y1-S.cciRegion.y0<12) S.cciRegion = null;
+$('#btnCciClear').hidden = !S.cciRegion; run();
+});
+$('#rsiW').addEventListener('change', e => { S.rsiShare = parseFloat(e.target.value); if(S.base) run(); });
+$('#cciW').addEventListener('change', e => { S.cciShare = parseFloat(e.target.value); if(S.base) run(); });
+$('#optOtc').addEventListener('change', e => { S.otc = e.target.checked; if(S.base) run(); });
+$('#fear').addEventListener('change', e => { S.fear = parseFloat(e.target.value); if(S.base) run(); });
+$('#file').addEventListener('change', e => loadFile(e.target.files[0]));
+const drop = $('#drop');
+['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => loadFile(e.dataTransfer.files[0]));
+drop.addEventListener('keydown', e => { if(e.key==='Enter' || e.key===' '){ e.preventDefault(); $('#file').click(); } });
+window.addEventListener('paste', e => {
+const it = [...(e.clipboardData?.items||[])].find(i => i.type.startsWith('image/'));
+if(it) loadFile(it.getAsFile());
+});
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => { if(!drop.contains(e.target)){ e.preventDefault(); if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); } });
+window.__S = S; window.__l5 = last5Layer; window.__fd = findDivergence; window.__div = divergenceLayer; window.__rsi = readRsi; window.__cci = readCci; window.__levels = levelsInfo; window.__atr = atrLayer; window.__run = run; window.__score = score;
+})();
+</script>
+</body>
+</html>
